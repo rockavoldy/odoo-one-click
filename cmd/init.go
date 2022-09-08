@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"odoo-one-click/config"
+	"odoo-one-click/utils"
 	"os"
 	"os/exec"
 	"strings"
@@ -29,12 +30,11 @@ var initCmd = &cobra.Command{
 func CheckRequirement() {
 	// first, need to confirm if it is ubuntu or derivatives
 
-	listOfDeps := []string{"postgresql", "postgresql-client", "libxml2-dev", "libxslt1-dev", "libldap2-dev", "libsasl2-dev", "libtiff5-dev", "libjpeg8-dev", "libopenjp2-7-dev", "zlib1g-dev", "libfreetype6-dev", "liblcms2-dev", "libwebp-dev", "libharfbuzz-dev", "libpq-dev", "git"}
+	listOfDeps := []string{"postgresql", "postgresql-client", "libxml2-dev", "libxslt1-dev", "libldap2-dev", "libsasl2-dev", "libtiff5-dev", "libjpeg8-dev", "libopenjp2-7-dev", "zlib1g-dev", "libfreetype6-dev", "liblcms2-dev", "libwebp-dev", "libharfbuzz-dev", "libpq-dev", "git", "libsqlite3-dev", "libreadline-dev", "libbz2-dev", "tk-dev"}
 
 	notInstalledDeps := make([]string, 0)
 
-	dpkgStatus := []string{"--status"}
-	dpkgStatus = append(dpkgStatus, listOfDeps...)
+	dpkgStatus := utils.PrependCommand(listOfDeps, []string{"--status"})
 
 	for _, dep := range listOfDeps {
 		err := exec.Command("dpkg", dpkgStatus...).Run()
@@ -46,14 +46,17 @@ func CheckRequirement() {
 	}
 
 	if len(notInstalledDeps) > 0 {
+		// When there is still missing dependencies, install them
 		log.Printf("Install missing dependencies: %s", strings.Join(notInstalledDeps, " "))
-		_, err := CheckSudoAccess()
+		err := utils.CheckSudoAccess()
 		if err != nil {
 			log.Fatalln("Wrong password: ", err)
 		}
 
-		cmd := exec.Command("bash", "-c", "sudo apt-get install -y "+strings.Join(notInstalledDeps, " "))
-		err = cmd.Run()
+		cmdAptInstall := []string{"apt-get", "install", "-y"}
+		cmdAptInstall = utils.PrependCommand(notInstalledDeps, cmdAptInstall)
+
+		err = exec.Command("sudo", cmdAptInstall...).Run()
 		if err != nil {
 			log.Println("Install dependencies: ", err)
 		}
@@ -61,15 +64,15 @@ func CheckRequirement() {
 
 	dbAccess, err := checkDBAccess()
 	if err != nil {
-		log.Println("DB Access: ", err)
+		log.Println("Can't access DB: ", err)
 	}
 
 	if !dbAccess {
-		isDbConfigured, err := configureDB()
+		err := configureDB()
 		if err != nil {
-			log.Fatalln("Err db configure: ", err)
+			log.Fatalln("Error when configure DB: ", err)
 		}
-		log.Println("Database is configured: ", isDbConfigured)
+		log.Println("Database successfully configured")
 	}
 
 	// TODO: as for now, it should be only work for ubuntu 20.04 and 22.04
@@ -84,36 +87,27 @@ func checkDBAccess() (bool, error) {
 		return false, err
 	}
 
-	log.Println("db can be accessed")
+	log.Println("Database can be accessed")
 
 	return true, nil
 }
 
-func configureDB() (bool, error) {
+func configureDB() error {
 	// TODO: Add validation first, to make sure no create command again executed
 	os.Setenv("PGPASSWORD", config.DB_PASSWORD)
-	psqlScript := fmt.Sprintf(`psql -c "CREATE ROLE %s SUPERUSER PASSWORD '%s';"`, config.DBUsername(), config.DB_PASSWORD)
+	psqlScript := fmt.Sprintf(`psql -c "CREATE ROLE %s SUPERUSER LOGIN PASSWORD '%s';"`, config.DBUsername(), config.DB_PASSWORD)
 	err := exec.Command("sudo", "su", "-", "postgres", "-c", psqlScript).Run()
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	// if db for the user already exist, there is no need to new one, so this will return error
 	_ = exec.Command("createdb", config.DBUsername()).Run()
 	if err != nil {
-		return true, nil
+		return nil
 	}
 
-	return true, nil
-}
-
-func CheckSudoAccess() (bool, error) {
-	err := exec.Command("sudo", "whoami").Run()
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
+	return nil
 }
 
 func isPyenvInstalled() (bool, error) {

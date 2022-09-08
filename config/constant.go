@@ -1,7 +1,9 @@
 package config
 
 import (
+	"log"
 	"os"
+	"strings"
 )
 
 const (
@@ -12,6 +14,17 @@ const (
 	DB_HOST         = "localhost"
 	DB_PORT         = "5432"
 )
+
+func OdooVersion() string {
+	if ODOOVER := os.Getenv("ODOO_VERSION"); ODOOVER != "" {
+		if !strings.Contains(ODOOVER, ".") {
+			log.Fatalf("It seems ODOO_VERSION = %s is not correct, please change with the branch name of odoo. Ex: 15.0\n", ODOOVER)
+		}
+		return os.Getenv("ODOO_VERSION")
+	}
+
+	return ODOO_VERSION
+}
 
 func DBUsername() string {
 	return "odoo"
