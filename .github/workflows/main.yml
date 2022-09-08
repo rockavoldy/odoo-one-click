@@ -1,0 +1,38 @@
+name: Build and release
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        cache: true
+        go-version: 1.19
+        
+    - name: Get dependencies and format
+      run: |
+        go mod tidy
+        go fmt ./...
+    - name: Build
+      run: |
+        echo "ODOO_ONE_VERSION=0.1.0" >> $GITHUB_ENV
+        GOOS=linux GOARCH=amd64 go build -o odoo-one-click .
+        zip odoo-one-click_amd64.zip odoo-one-click
+    - name: Publish GitHub Release
+      if: contains(github.event.head_commit.message, 'Bump version') == false
+      uses: ncipollo/release-action@v1.8.6
+      with:
+        prerelease: true
+        artifacts: "*.zip"
+        tag: "v${{ env.ODOO_ONE_VERSION }}"
+        token: ${{ secrets.GITHUB_TOKEN }}
