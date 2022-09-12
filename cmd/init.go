@@ -32,7 +32,6 @@ var initCmd = &cobra.Command{
 
 func CheckRequirement() {
 	// first, need to confirm if it is ubuntu or derivatives
-
 	listOfDeps := []string{"postgresql", "postgresql-client", "libxml2-dev", "libxslt1-dev", "libldap2-dev", "libsasl2-dev", "libtiff5-dev", "libjpeg8-dev", "libopenjp2-7-dev", "zlib1g-dev", "libfreetype6-dev", "liblcms2-dev", "libwebp-dev", "libharfbuzz-dev", "libpq-dev", "git", "libsqlite3-dev", "libreadline-dev", "libbz2-dev", "tk-dev"}
 
 	notInstalledDeps := make([]string, 0)
@@ -77,8 +76,6 @@ func CheckRequirement() {
 		}
 		log.Println("Database successfully configured")
 	}
-
-	// TODO: as for now, it should be only work for ubuntu 20.04 and 22.04
 }
 
 func checkDBAccess() (bool, error) {
