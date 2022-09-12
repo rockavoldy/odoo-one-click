@@ -26,11 +26,11 @@ Odoo-one-click, help you to setup your odoo instances with just 1 command.
 5. Done!, you can now use `odoo-one-click` command
 
 ## Usage
-- If it is your first time using `odoo-one-click`, you need to run `init` command to prepare your system
+- If it is your first time using `odoo-one-click`, you need to run `init` command to setup your system
     ```sh
     odoo-one-click init
     ```
-- After it's done prepare your system, you can now run command `install` to install your desired odoo version
+- After it's done, you can now run command `install` to install your desired odoo version
     ```sh
     odoo-one-click install
     ```
