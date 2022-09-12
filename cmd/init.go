@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"odoo-one-click/config"
 	"odoo-one-click/utils"
@@ -21,7 +22,9 @@ var initCmd = &cobra.Command{
 	Short: "First initialization, install pyenv, configure postgresql and clone odoo",
 	Long:  "First initialization for installing pyenv, configure postgresql, and clone odoo",
 	Run: func(cmd *cobra.Command, args []string) {
-		// fmt.Println(config.VERSION)
+		if !config.Verbose {
+			log.SetOutput(io.Discard)
+		}
 		CheckRequirement()
 		checkPyenv()
 	},

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
@@ -52,4 +53,13 @@ func CheckVenvCreated(venv string) (bool, error) {
 
 	log.Println(string(out))
 	return true, nil
+}
+
+func GetPythonBasedOdooVer(odooVer string) string {
+	ver, _ := strconv.Atoi(strings.Split(odooVer, ".")[0])
+	if ver < 13 {
+		return "3.7.13"
+	}
+
+	return "3.8.13"
 }

@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"odoo-one-click/config"
@@ -13,7 +15,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var isEnterprise bool
+var odooVer string
+var dbName string
+var pythonVer string
+var ghUsername string
+var ghToken string
+
 func init() {
+	installCmd.Flags().BoolVarP(&isEnterprise, "enterprise", "e", false, "Install odoo enterprise")
+	installCmd.Flags().StringVarP(&odooVer, "odoo-version", "o", "", "Odoo version to install")
+	installCmd.Flags().StringVarP(&dbName, "db-name", "d", "", "Database name to create or use")
+	installCmd.Flags().StringVarP(&pythonVer, "python-version", "p", "", "Python version to use")
+
 	rootCmd.AddCommand(installCmd)
 }
 
@@ -22,8 +36,35 @@ var installCmd = &cobra.Command{
 	Short: "Install and configure odoo",
 	Long:  "Install and configure odoo with demo data",
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Println(config.OdooVersion())
-		installConf := NewInstallConf(false, config.OdooVersion(), "3.8.13", "odoo15", "", "")
+		if !config.Verbose {
+			// TODO: create 1 log file for the project to use; can be extended to log to a file
+			log.SetOutput(io.Discard)
+		}
+
+		if isEnterprise {
+			// when enterprise is checked, ask for github username and token
+			reader := bufio.NewReader(os.Stdin)
+			fmt.Print("Enter github username: ")
+			ghUsername, _ = reader.ReadString('\n')
+			ghUsername = strings.Replace(ghUsername, "\n", "", -1)
+
+			fmt.Print("Enter github token: ")
+			ghToken, _ = reader.ReadString('\n')
+			ghToken = strings.Replace(ghToken, "\n", "", -1)
+		}
+
+		if odooVer == "" {
+			odooVer = config.OdooVersion()
+		}
+
+		if dbName == "" {
+			dbName = utils.DirName(odooVer, isEnterprise)
+		}
+		if pythonVer == "" {
+			pythonVer = utils.GetPythonBasedOdooVer(odooVer)
+		}
+
+		installConf := NewInstallConf(isEnterprise, odooVer, pythonVer, dbName, ghUsername, ghToken)
 		installConf.InstallOdoo()
 	},
 }
@@ -58,6 +99,13 @@ func (ic InstallConf) InstallOdoo() {
 		log.Println("Clone odoo community: ", err)
 	}
 
+	if ic.isEnterprise {
+		err = ic.cloneOdooEnterprise()
+		if err != nil {
+			log.Println("Clone odoo enterprise: ", err)
+		}
+	}
+
 	err = ic.initPyenv()
 	if err != nil {
 		log.Println("Initialize pyenv: ", err)
@@ -84,6 +132,10 @@ func (ic InstallConf) cloneOdooCommunity() error {
 	err := os.Chdir(config.OdooDir())
 	if err != nil {
 		log.Println("Change directory: ", err)
+		if strings.Contains(err.Error(), "no such file or directory") {
+			fmt.Println("Please run `odoo-one-click init` first.")
+			os.Exit(1)
+		}
 		return err
 	}
 
@@ -99,6 +151,19 @@ func (ic InstallConf) cloneOdooCommunity() error {
 	err = os.Chdir(config.OdooDir() + "/" + dirName)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (ic InstallConf) cloneOdooEnterprise() error {
+	log.Println("Cloning Odoo Enterprise")
+	enterpriseUrl := fmt.Sprintf("https://%s:%s@github.com/odoo/enterprise", ic.ghUsername, ic.ghToken)
+	err := exec.Command("git", "clone", enterpriseUrl, "--branch", ic.odooVer, "--depth", "1").Run()
+	if err != nil {
+		if !strings.Contains(err.Error(), "exit status 128") {
+			return err
+		}
 	}
 
 	return nil
@@ -147,6 +212,12 @@ func (ic InstallConf) installOdooDeps() error {
 		return err
 	}
 
+	// handle this issue https://github.com/odoo/odoo/issues/99809, because it seems affect odoo 13 and up
+	err = exec.Command("pip", "install", "pyopenssl==22.0.0").Run()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -162,6 +233,12 @@ db_password = %s
 db_name = %s
 addons_path = ./addons, ./odoo/addons
 `, config.DBUsername(), config.DB_PASSWORD, ic.dbName)
+
+	if ic.isEnterprise {
+		// When it's enterprise, add enterprise addons path to odoo.conf
+		confFile = confFile + ", ./enterprise"
+	}
+
 	err := ioutil.WriteFile("odoo.conf", []byte(confFile), 0644)
 	if err != nil {
 		return err
