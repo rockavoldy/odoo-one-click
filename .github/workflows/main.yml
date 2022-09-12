@@ -64,30 +64,33 @@ jobs:
         echo "BUMP_TAG=${{ steps.bump_major.outputs.next-version }}" >> $GITHUB_ENV
 
     - name: Set up Go
+      if: env.BUMP_TAG != 'NULL'
       uses: actions/setup-go@v3
       with:
         cache: true
         go-version: 1.19
         
     - name: Get dependencies and format
+      if: env.BUMP_TAG != 'NULL'
       run: |
         go mod tidy
         go fmt ./...
 
     - name: Build
+      if: env.BUMP_TAG != 'NULL'
       run: |
         GOOS=linux GOARCH=amd64 go build -ldflags "-X odoo-one-click/config.VERSION=${{ env.BUMP_TAG }}" -o odoo-one-click .
         zip odoo-one-click_amd64.zip odoo-one-click
 
 
-    # - name: Delete old prerelease tag with v0.x.x
-    #   if: ${{ env.CUR_TAG }} == ${{ env.BUMP_TAG }}
-    #   uses: dev-drprasad/delete-tag-and-release@v0.2.0
-    #   with:
-    #     delete_release: true
-    #     tag_name: ${{ env.OLD_PRE_TAG }}
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Delete old prerelease tag with v0.x.x
+      if: (env.OLD_PRE_TAG == env.BUMP_TAG) && (env.BUMP_TAG != 'NULL')
+      uses: dev-drprasad/delete-tag-and-release@v0.2.0
+      with:
+        delete_release: true
+        tag_name: ${{ env.OLD_PRE_TAG }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Publish GitHub Release
       if: env.BUMP_TAG != 'NULL'
