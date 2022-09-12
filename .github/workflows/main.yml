@@ -13,6 +13,16 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Manage Version
+      run: |
+        git fetch --prune --unshallow --tags
+        CUR_TAG="$(git tag -l | grep ^v0. | tail -1)"
+        if [[ -z $CUR_TAG ]]; then
+          echo "OLD_PRE_TAG=NULL" >> $GITHUB_ENV
+        else
+          echo "OLD_PRE_TAG=$CUR_TAG" >> $GITHUB_ENV
+        fi
+
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
@@ -28,6 +38,16 @@ jobs:
         echo "ODOO_ONE_VERSION=0.1.0" >> $GITHUB_ENV
         GOOS=linux GOARCH=amd64 go build -o odoo-one-click .
         zip odoo-one-click_amd64.zip odoo-one-click
+
+
+    - name: Delete old prerelease tag with v0.x.x
+      uses: dev-drprasad/delete-tag-and-release@v0.2.0
+      with:
+        delete_release: true
+        tag_name: ${{ env.OLD_PRE_TAG }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Publish GitHub Release
       if: contains(github.event.head_commit.message, 'Bump version') == false
       uses: ncipollo/release-action@v1.8.6
