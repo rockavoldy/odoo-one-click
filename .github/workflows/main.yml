@@ -17,7 +17,6 @@ jobs:
       run: |
         git fetch --prune --unshallow --tags
         CUR_TAG="$(git tag -l | tail -1)"
-        echo "BUMP_TAG=NULL" >> $GITHUB_ENV
         if [[ -z $CUR_TAG ]]; then
           echo "CUR_TAG=0.1.0" >> $GITHUB_ENV
           echo "OLD_PRE_TAG=NULL" >> $GITHUB_ENV
@@ -82,17 +81,17 @@ jobs:
         zip odoo-one-click_amd64.zip odoo-one-click
 
 
-    - name: Delete old prerelease tag with v0.x.x
-      if: ${{ env.CUR_TAG }} == ${{ env.BUMP_TAG }}
-      uses: dev-drprasad/delete-tag-and-release@v0.2.0
-      with:
-        delete_release: true
-        tag_name: ${{ env.OLD_PRE_TAG }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    # - name: Delete old prerelease tag with v0.x.x
+    #   if: ${{ env.CUR_TAG }} == ${{ env.BUMP_TAG }}
+    #   uses: dev-drprasad/delete-tag-and-release@v0.2.0
+    #   with:
+    #     delete_release: true
+    #     tag_name: ${{ env.OLD_PRE_TAG }}
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Publish GitHub Release
-      if: ${{ env.BUMP_TAG }} != "NULL"
+      if: ${{ env.BUMP_TAG }} != false
       uses: ncipollo/release-action@v1.8.6
       with:
         prerelease: true
