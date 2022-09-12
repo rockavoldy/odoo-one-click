@@ -7,16 +7,15 @@ on:
     branches: [ "main" ]
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-
     - name: Manage Version
       run: |
         git fetch --prune --unshallow --tags
         CUR_TAG="$(git tag -l | tail -1)"
+        echo "BUMP_TAG=NULL" >> $GITHUB_ENV
         if [[ -z $CUR_TAG ]]; then
           echo "CUR_TAG=0.1.0" >> $GITHUB_ENV
           echo "OLD_PRE_TAG=NULL" >> $GITHUB_ENV
@@ -91,7 +90,7 @@ jobs:
     #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Publish GitHub Release
-      if: ${{ env.BUMP_TAG }} != false
+      if: env.BUMP_TAG != 'NULL'
       uses: ncipollo/release-action@v1.8.6
       with:
         prerelease: true
