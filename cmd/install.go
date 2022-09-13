@@ -24,17 +24,26 @@ var ghToken string
 
 func init() {
 	installCmd.Flags().BoolVarP(&isEnterprise, "enterprise", "e", false, "Install odoo enterprise")
-	installCmd.Flags().StringVarP(&odooVer, "odoo-version", "o", "", "Odoo version to install")
+	installCmd.Flags().StringVarP(&odooVer, "odoo", "o", "", "Odoo version to install")
 	installCmd.Flags().StringVarP(&dbName, "db-name", "d", "", "Database name to create or use")
-	installCmd.Flags().StringVarP(&pythonVer, "python-version", "p", "", "Python version to use")
+	installCmd.Flags().StringVarP(&pythonVer, "python", "p", "", "Python version to use")
 
 	rootCmd.AddCommand(installCmd)
 }
 
 var installCmd = &cobra.Command{
-	Use:   "install",
+	Use:   "install [flags] directory_name",
 	Short: "Install and configure odoo",
-	Long:  "Install and configure odoo with demo data",
+	Args: func(cmd *cobra.Command, args []string) error {
+		if len(args) > 1 {
+			return fmt.Errorf("too many arguments")
+		}
+		if len(args) == 1 && !utils.IsValidDirName(args[0]) {
+			return fmt.Errorf("invalid directory name")
+		}
+
+		return nil
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if !config.Verbose {
 			// TODO: create 1 log file for the project to use; can be extended to log to a file
@@ -46,11 +55,11 @@ var installCmd = &cobra.Command{
 			reader := bufio.NewReader(os.Stdin)
 			fmt.Print("Enter github username: ")
 			ghUsername, _ = reader.ReadString('\n')
-			ghUsername = strings.Replace(ghUsername, "\n", "", -1)
+			ghUsername = utils.RemoveNewLine(ghUsername)
 
 			fmt.Print("Enter github token: ")
 			ghToken, _ = reader.ReadString('\n')
-			ghToken = strings.Replace(ghToken, "\n", "", -1)
+			ghToken = utils.RemoveNewLine(ghToken)
 		}
 
 		if odooVer == "" {
@@ -63,8 +72,13 @@ var installCmd = &cobra.Command{
 		if pythonVer == "" {
 			pythonVer = utils.GetPythonBasedOdooVer(odooVer)
 		}
+		dirName := utils.DirName(odooVer, isEnterprise)
 
-		installConf := NewInstallConf(isEnterprise, odooVer, pythonVer, dbName, ghUsername, ghToken)
+		if len(args) == 1 {
+			dirName = args[0]
+		}
+
+		installConf := NewInstallConf(isEnterprise, odooVer, pythonVer, dbName, ghUsername, ghToken, dirName)
 		installConf.InstallOdoo()
 	},
 }
@@ -76,9 +90,10 @@ type InstallConf struct {
 	dbName       string // Database name for odoo
 	ghUsername   string // when is_enterprise is true, need to fill this username
 	ghToken      string // when is_enterprise is true, need to fill this token
+	dirName      string // where odoo want to be installed
 }
 
-func NewInstallConf(isEnterprise bool, odooVer, pythonVer, dbName, ghUser, ghToken string) *InstallConf {
+func NewInstallConf(isEnterprise bool, odooVer, pythonVer, dbName, ghUser, ghToken, dirName string) *InstallConf {
 	if isEnterprise && (ghUser == "" || ghToken == "") {
 		log.Fatalln("Please provide github username and token to clone odoo enterprise.")
 	}
@@ -89,6 +104,7 @@ func NewInstallConf(isEnterprise bool, odooVer, pythonVer, dbName, ghUser, ghTok
 		dbName:       dbName,
 		ghUsername:   ghUser,
 		ghToken:      ghToken,
+		dirName:      dirName,
 	}
 }
 
@@ -125,6 +141,9 @@ func (ic InstallConf) InstallOdoo() {
 	if err != nil {
 		log.Println("Create odoo conf: ", err)
 	}
+
+	dirName := utils.DirName(ic.odooVer, ic.isEnterprise)
+	fmt.Printf("Your odoo %s is ready to use at\n%s\n", dirName, config.OdooDir()+"/"+ic.dirName)
 }
 
 func (ic InstallConf) cloneOdooCommunity() error {
@@ -139,16 +158,14 @@ func (ic InstallConf) cloneOdooCommunity() error {
 		return err
 	}
 
-	dirName := utils.DirName(ic.odooVer, ic.isEnterprise)
-
-	err = exec.Command("git", "clone", "https://github.com/odoo/odoo", "--branch", ic.odooVer, "--depth", "1", dirName).Run()
+	err = exec.Command("git", "clone", "https://github.com/odoo/odoo", "--branch", ic.odooVer, "--depth", "1", ic.dirName).Run()
 	if err != nil {
 		if !strings.Contains(err.Error(), "exit status 128") {
 			return err
 		}
 	}
 
-	err = os.Chdir(config.OdooDir() + "/" + dirName)
+	err = os.Chdir(config.OdooDir() + "/" + ic.dirName)
 	if err != nil {
 		return err
 	}
@@ -183,21 +200,20 @@ func (ic InstallConf) initPyenv() error {
 		}
 	}
 
-	dirName := utils.DirName(ic.odooVer, ic.isEnterprise)
-	isVenvCreated, err := utils.CheckVenvCreated(dirName)
+	isVenvCreated, err := utils.CheckVenvCreated(ic.dirName)
 	if err != nil {
 		log.Println(err)
 	}
 
 	if !isVenvCreated {
-		err = exec.Command("pyenv", "virtualenv", ic.pythonVer, dirName).Run()
+		err = exec.Command("pyenv", "virtualenv", ic.pythonVer, ic.dirName).Run()
 		if err != nil {
 			log.Println("Error on create venv: ", err)
 			return err
 		}
 	}
 
-	err = exec.Command("pyenv", "local", dirName).Run()
+	err = exec.Command("pyenv", "local", ic.dirName).Run()
 	if err != nil {
 		return err
 	}
@@ -231,12 +247,13 @@ db_port = 5432
 db_user = %s
 db_password = %s
 db_name = %s
-addons_path = ./addons, ./odoo/addons
-`, config.DBUsername(), config.DB_PASSWORD, ic.dbName)
+addons_path = ./addons, ./odoo/addons`, config.DBUsername(), config.DB_PASSWORD, ic.dbName)
 
 	if ic.isEnterprise {
 		// When it's enterprise, add enterprise addons path to odoo.conf
-		confFile = confFile + ", ./enterprise"
+		confFile = confFile + ", ./enterprise\n"
+	} else {
+		confFile = confFile + "\n"
 	}
 
 	err := ioutil.WriteFile("odoo.conf", []byte(confFile), 0644)

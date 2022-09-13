@@ -29,3 +29,15 @@ func OdooDir() string {
 	home, _ := os.UserHomeDir()
 	return home + "/odoo"
 }
+
+var allowedOS = map[string]bool{
+	"focal":   true,
+	"groovy":  true,
+	"hirsute": true,
+	"impish":  true,
+	"jammy":   true,
+}
+
+func IsAllowedOS(os string) bool {
+	return allowedOS[os]
+}

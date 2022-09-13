@@ -28,7 +28,7 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
-	rootCmd.PersistentFlags().BoolVarP(&config.Verbose, "verbose", "V", false, "Print logs to stdout")
+	rootCmd.PersistentFlags().BoolVarP(&config.Verbose, "verbose", "v", false, "Print logs to stdout")
 	rootCmd.SetVersionTemplate(fmt.Sprintf("Odoo one-click v%s\n", config.VERSION))
 
 	if err := rootCmd.Execute(); err != nil {

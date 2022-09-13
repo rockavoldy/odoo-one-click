@@ -63,3 +63,24 @@ func GetPythonBasedOdooVer(odooVer string) string {
 
 	return "3.8.13"
 }
+
+func RemoveNewLine(data string) string {
+	return strings.Replace(data, "\n", "", -1)
+}
+
+func IsValidDirName(dirName string) bool {
+	if dirName == "" {
+		return false
+	}
+	if strings.Contains(dirName, " ") {
+		return false
+	}
+	if strings.Contains(dirName, "/") {
+		return false
+	}
+	if strings.HasPrefix(dirName, ".") {
+		return false
+	}
+
+	return true
+}
