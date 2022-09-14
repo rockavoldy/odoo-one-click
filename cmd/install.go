@@ -3,9 +3,6 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"log"
 	"odoo-one-click/config"
 	"odoo-one-click/utils"
 	"os"
@@ -45,12 +42,9 @@ var installCmd = &cobra.Command{
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		if !config.Verbose {
-			// TODO: create 1 log file for the project to use; can be extended to log to a file
-			log.SetOutput(io.Discard)
-		}
-
 		if isEnterprise {
+			Logger = utils.Logger(config.Verbose)
+
 			// when enterprise is checked, ask for github username and token
 			reader := bufio.NewReader(os.Stdin)
 			fmt.Print("Enter github username: ")
@@ -95,7 +89,7 @@ type InstallConf struct {
 
 func NewInstallConf(isEnterprise bool, odooVer, pythonVer, dbName, ghUser, ghToken, dirName string) *InstallConf {
 	if isEnterprise && (ghUser == "" || ghToken == "") {
-		log.Fatalln("Please provide github username and token to clone odoo enterprise.")
+		Logger.Fatalln("Please provide github username and token to clone odoo enterprise.")
 	}
 	return &InstallConf{
 		isEnterprise: isEnterprise,
@@ -109,37 +103,42 @@ func NewInstallConf(isEnterprise bool, odooVer, pythonVer, dbName, ghUser, ghTok
 }
 
 func (ic InstallConf) InstallOdoo() {
-	log.Println("Installing Odoo")
+	Logger.Println("Installing Odoo")
+	if !ic.isEnterprise {
+		fmt.Printf("Cloning odoo %s community", ic.odooVer)
+	} else {
+		fmt.Printf("Cloning odoo %s enterprise", ic.odooVer)
+	}
 	err := ic.cloneOdooCommunity()
 	if err != nil {
-		log.Println("Clone odoo community: ", err)
+		Logger.Println("Clone odoo community: ", err)
 	}
 
 	if ic.isEnterprise {
 		err = ic.cloneOdooEnterprise()
 		if err != nil {
-			log.Println("Clone odoo enterprise: ", err)
+			Logger.Println("Clone odoo enterprise: ", err)
 		}
 	}
 
 	err = ic.initPyenv()
 	if err != nil {
-		log.Println("Initialize pyenv: ", err)
+		Logger.Println("Initialize pyenv: ", err)
 	}
 
 	err = ic.installOdooDeps()
 	if err != nil {
-		log.Println("Install odoo dependencies: ", err)
+		Logger.Println("Install odoo dependencies: ", err)
 	}
 
 	err = exec.Command("createdb", ic.dbName).Run()
 	if err != nil {
-		log.Println("CreateDB odoo: ", err)
+		Logger.Println("CreateDB odoo: ", err)
 	}
 
 	err = ic.createOdooConf()
 	if err != nil {
-		log.Println("Create odoo conf: ", err)
+		Logger.Println("Create odoo conf: ", err)
 	}
 
 	dirName := utils.DirName(ic.odooVer, ic.isEnterprise)
@@ -147,10 +146,10 @@ func (ic InstallConf) InstallOdoo() {
 }
 
 func (ic InstallConf) cloneOdooCommunity() error {
-	log.Println("Cloning Odoo Community")
+	Logger.Println("Cloning Odoo Community")
 	err := os.Chdir(config.OdooDir())
 	if err != nil {
-		log.Println("Change directory: ", err)
+		Logger.Println("Change directory: ", err)
 		if strings.Contains(err.Error(), "no such file or directory") {
 			fmt.Println("Please run `odoo-one-click init` first.")
 			os.Exit(1)
@@ -174,7 +173,7 @@ func (ic InstallConf) cloneOdooCommunity() error {
 }
 
 func (ic InstallConf) cloneOdooEnterprise() error {
-	log.Println("Cloning Odoo Enterprise")
+	Logger.Println("Cloning Odoo Enterprise")
 	enterpriseUrl := fmt.Sprintf("https://%s:%s@github.com/odoo/enterprise", ic.ghUsername, ic.ghToken)
 	err := exec.Command("git", "clone", enterpriseUrl, "--branch", ic.odooVer, "--depth", "1").Run()
 	if err != nil {
@@ -187,10 +186,10 @@ func (ic InstallConf) cloneOdooEnterprise() error {
 }
 
 func (ic InstallConf) initPyenv() error {
-	log.Println("Initializing pyenv")
+	Logger.Println("Initializing pyenv")
 	isPyVerInstalled, err := utils.CheckPythonInstalled(ic.pythonVer)
 	if err != nil {
-		log.Println(err)
+		Logger.Println(err)
 	}
 
 	if !isPyVerInstalled {
@@ -202,13 +201,13 @@ func (ic InstallConf) initPyenv() error {
 
 	isVenvCreated, err := utils.CheckVenvCreated(ic.dirName)
 	if err != nil {
-		log.Println(err)
+		Logger.Println(err)
 	}
 
 	if !isVenvCreated {
 		err = exec.Command("pyenv", "virtualenv", ic.pythonVer, ic.dirName).Run()
 		if err != nil {
-			log.Println("Error on create venv: ", err)
+			Logger.Println("Error on create venv: ", err)
 			return err
 		}
 	}
@@ -222,7 +221,7 @@ func (ic InstallConf) initPyenv() error {
 }
 
 func (ic InstallConf) installOdooDeps() error {
-	log.Println("Installing Odoo Dependencies")
+	Logger.Println("Installing Odoo Dependencies")
 	err := exec.Command("pip", "install", "-r", "requirements.txt").Run()
 	if err != nil {
 		return err
@@ -238,7 +237,7 @@ func (ic InstallConf) installOdooDeps() error {
 }
 
 func (ic InstallConf) createOdooConf() error {
-	log.Println("Creating Odoo Configuration")
+	Logger.Println("Creating Odoo Configuration")
 	confFile := fmt.Sprintf(`
 [options]
 admin_passwd = admin
@@ -256,7 +255,7 @@ addons_path = ./addons, ./odoo/addons`, config.DBUsername(), config.DB_PASSWORD,
 		confFile = confFile + "\n"
 	}
 
-	err := ioutil.WriteFile("odoo.conf", []byte(confFile), 0644)
+	err := os.WriteFile("odoo.conf", []byte(confFile), 0644)
 	if err != nil {
 		return err
 	}
