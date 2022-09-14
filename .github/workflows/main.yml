@@ -26,42 +26,50 @@ jobs:
 
     - name: Increment patch version
       id: bump_patch
-      if: contains(github.event.head_commit.message, 'bump patch') == true
+      if: contains(github.event.head_commit.message, 'patch:') == true
       uses: christian-draeger/increment-semantic-version@1.0.2
       with: 
         current-version: ${{ env.CUR_TAG }}
         version-fragment: 'bug'
 
     - name: Set env patch
-      if: contains(github.event.head_commit.message, 'bump patch') == true
+      if: contains(github.event.head_commit.message, 'patch:') == true
       run: |
         echo "BUMP_TAG=${{ steps.bump_patch.outputs.next-version }}" >> $GITHUB_ENV
+        echo "PRERELEASE=${{ true }}" >> $GITHUB_ENV
 
     - name: Increment minor version
       id: bump_minor
-      if: contains(github.event.head_commit.message, 'bump minor') == true
+      if: contains(github.event.head_commit.message, 'feat:') == true
       uses: christian-draeger/increment-semantic-version@1.0.2
       with: 
         current-version: ${{ env.CUR_TAG }}
         version-fragment: 'feature'
 
     - name: Set env minor
-      if: contains(github.event.head_commit.message, 'bump minor') == true
+      if: contains(github.event.head_commit.message, 'feat:') == true
       run: |
         echo "BUMP_TAG=${{ steps.bump_minor.outputs.next-version }}" >> $GITHUB_ENV
+        echo "PRERELEASE=${{ true }}" >> $GITHUB_ENV
 
     - name: Increment major version
       id: bump_major
-      if: contains(github.event.head_commit.message, 'bump major') == true
+      if: contains(github.event.head_commit.message, 'feat(bump):') == true
       uses: christian-draeger/increment-semantic-version@1.0.2
       with: 
         current-version: ${{ env.CUR_TAG }}
         version-fragment: 'major'
     
     - name: Set env major
-      if: contains(github.event.head_commit.message, 'bump major') == true
+      if: contains(github.event.head_commit.message, 'feat(bump):') == true
       run: |
         echo "BUMP_TAG=${{ steps.bump_major.outputs.next-version }}" >> $GITHUB_ENV
+        echo "PRERELEASE=${{ true }}" >> $GITHUB_ENV
+
+    - name: Set RELEASE tag
+      if: contains(github.event.head_commit.message, ':release:') == true
+      run: |
+        echo "PRERELEASE=${{ false }}" >> $GITHUB_ENV
 
     - name: Set up Go
       if: env.BUMP_TAG != 'NULL'
@@ -96,7 +104,7 @@ jobs:
       if: env.BUMP_TAG != 'NULL'
       uses: ncipollo/release-action@v1.8.6
       with:
-        prerelease: true
+        prerelease: env.PRERELEASE
         artifacts: "*.zip"
         tag: "${{ env.BUMP_TAG }}"
         token: ${{ secrets.GITHUB_TOKEN }}

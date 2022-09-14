@@ -24,7 +24,7 @@ Odoo-one-click, help you to setup your odoo instances with just 1 command.
     ```sh
     sudo chmod +x /usr/local/bin/odoo-one-click
     ```
-5. Done!, you can now use `odoo-one-click` command
+5. Restart your terminal, an Done!. You can now use `odoo-one-click` command
 
 ## Usage
 - If it is your first time using `odoo-one-click`, you need to run `init` command to setup your system
