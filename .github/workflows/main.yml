@@ -3,8 +3,10 @@ name: Build and release
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  # TODO: need to create unit test, and run the test when do PR to branches main
+  # pull_request:
+  #   branches: [ "main" ]
+
 
 jobs:
   build:
