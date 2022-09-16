@@ -64,6 +64,12 @@ func CheckRequirement() {
 		if err != nil {
 			Logger.Fatalln("Install dependencies: ", err)
 		}
+
+		err = exec.Command("sudo", "service", "postgresql", "start").Run()
+		if err != nil {
+			Logger.Fatalln("Failed to start postgresql: ", err)
+		}
+
 	}
 
 	dbAccess, err := checkDBAccess()

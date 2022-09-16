@@ -143,6 +143,7 @@ func (ic InstallConf) InstallOdoo() {
 
 	dirName := utils.DirName(ic.odooVer, ic.isEnterprise)
 	fmt.Printf("Your odoo %s is ready to use at\n%s\n", dirName, config.OdooDir()+"/"+ic.dirName)
+	fmt.Println("for the first run, you need to initialize the db with base addons by add -i base")
 }
 
 func (ic InstallConf) cloneOdooCommunity() error {
