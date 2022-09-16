@@ -2,13 +2,15 @@ package cmd
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"odoo-one-click/config"
+	"odoo-one-click/utils"
 	"os"
 
 	"github.com/spf13/cobra"
 )
+
+var Logger *log.Logger
 
 var rootCmd = &cobra.Command{
 	Use:              "odoo-one-click",
@@ -17,10 +19,7 @@ var rootCmd = &cobra.Command{
 	Version:          config.VERSION,
 	TraverseChildren: true,
 	Run: func(cmd *cobra.Command, args []string) {
-		if !config.Verbose {
-			// When verbose flag called, print logs to stdout
-			log.SetOutput(io.Discard)
-		}
+		Logger = utils.Logger(config.Verbose)
 
 		fmt.Println("Hei hoi!")
 		fmt.Println("Use --help to see available commands")

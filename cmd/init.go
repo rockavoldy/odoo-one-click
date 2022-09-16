@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"io"
-	"log"
 	"odoo-one-click/config"
 	"odoo-one-click/utils"
 	"os"
@@ -22,9 +20,8 @@ var initCmd = &cobra.Command{
 	Short: "First initialization, install pyenv, configure postgresql and clone odoo",
 	Long:  "First initialization for installing pyenv, configure postgresql, and clone odoo",
 	Run: func(cmd *cobra.Command, args []string) {
-		if !config.Verbose {
-			log.SetOutput(io.Discard)
-		}
+		Logger = utils.Logger(config.Verbose)
+
 		CheckRequirement()
 		checkPyenv()
 	},
@@ -42,17 +39,22 @@ func CheckRequirement() {
 		err := exec.Command("dpkg", dpkgStatus...).Run()
 		// when the package already installed, err will be nil
 		if err != nil {
-			log.Println("Check dependencies: ", err)
+			Logger.Println("Check dependencies: ", err)
 			notInstalledDeps = append(notInstalledDeps, dep)
 		}
 	}
 
 	if len(notInstalledDeps) > 0 {
 		// When there is still missing dependencies, install them
-		log.Printf("Install missing dependencies: %s", strings.Join(notInstalledDeps, " "))
+		fmt.Printf("Install missing dependencies: %s\n", strings.Join(notInstalledDeps, " "))
 		err := utils.CheckSudoAccess()
 		if err != nil {
-			log.Fatalln("Wrong password: ", err)
+			Logger.Fatalln("Wrong password: ", err)
+		}
+
+		err = exec.Command("sudo", "apt-get", "update").Run()
+		if err != nil {
+			Logger.Fatalln("Failed to update repositories: ", err)
 		}
 
 		cmdAptInstall := []string{"apt-get", "install", "-y"}
@@ -60,22 +62,34 @@ func CheckRequirement() {
 
 		err = exec.Command("sudo", cmdAptInstall...).Run()
 		if err != nil {
-			log.Println("Install dependencies: ", err)
+			Logger.Fatalln("Install dependencies: ", err)
 		}
+
+		err = exec.Command("sudo", "service", "postgresql", "start").Run()
+		if err != nil {
+			Logger.Fatalln("Failed to start postgresql: ", err)
+		}
+
 	}
 
 	dbAccess, err := checkDBAccess()
 	if err != nil {
-		log.Println("Can't access DB: ", err)
+		if strings.Contains(err.Error(), "exit status 127") {
+			Logger.Fatalln("Postgresql is not installed, please install it first")
+		}
+
+		Logger.Println("Can't access DB: ", err)
 	}
 
 	if !dbAccess {
 		err := configureDB()
 		if err != nil {
-			log.Fatalln("Error when configure DB: ", err)
+			Logger.Fatalln("Error when configure DB: ", err)
 		}
-		log.Println("Database successfully configured")
+		fmt.Println("Database successfully configured")
 	}
+
+	fmt.Printf("User database %s with password %s have superuser access", config.DBUsername(), config.DB_PASSWORD)
 }
 
 func checkDBAccess() (bool, error) {
@@ -87,7 +101,7 @@ func checkDBAccess() (bool, error) {
 		return false, err
 	}
 
-	log.Println("Database can be accessed")
+	Logger.Println("Database can be accessed")
 
 	return true, nil
 }
@@ -136,21 +150,21 @@ func installPyenv() (bool, error) {
 func checkPyenv() {
 	pyenvInstalled, err := isPyenvInstalled()
 	if err != nil {
-		log.Println(err)
+		Logger.Println(err)
 	}
 
 	if !pyenvInstalled {
-		log.Println("Pyenv is not installed, installing pyenv")
+		Logger.Println("Pyenv is not installed, installing pyenv")
 		_, err := installPyenv()
 		if err != nil {
-			log.Fatalf("Failed to install pyenv: %s", err)
+			Logger.Fatalf("Failed to install pyenv: %s", err)
 		}
 	}
 
 	if _, err := os.Stat(config.OdooDir()); os.IsNotExist(err) {
 		err = os.MkdirAll(config.OdooDir(), config.ODOO_PERMISSION)
 		if err != nil {
-			log.Fatalln(err)
+			Logger.Fatalln(err)
 		}
 	}
 }
