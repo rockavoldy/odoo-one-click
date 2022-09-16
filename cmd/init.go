@@ -52,17 +52,26 @@ func CheckRequirement() {
 			Logger.Fatalln("Wrong password: ", err)
 		}
 
+		err = exec.Command("sudo", "apt-get", "update").Run()
+		if err != nil {
+			Logger.Fatalln("Failed to update repositories: ", err)
+		}
+
 		cmdAptInstall := []string{"apt-get", "install", "-y"}
 		cmdAptInstall = utils.PrependCommand(notInstalledDeps, cmdAptInstall)
 
 		err = exec.Command("sudo", cmdAptInstall...).Run()
 		if err != nil {
-			Logger.Println("Install dependencies: ", err)
+			Logger.Fatalln("Install dependencies: ", err)
 		}
 	}
 
 	dbAccess, err := checkDBAccess()
 	if err != nil {
+		if strings.Contains(err.Error(), "exit status 127") {
+			Logger.Fatalln("Postgresql is not installed, please install it first")
+		}
+
 		Logger.Println("Can't access DB: ", err)
 	}
 
