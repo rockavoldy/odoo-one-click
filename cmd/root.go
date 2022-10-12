@@ -6,6 +6,7 @@ import (
 	"odoo-one-click/config"
 	"odoo-one-click/utils"
 	"os"
+	"os/exec"
 
 	"github.com/spf13/cobra"
 )
@@ -18,9 +19,18 @@ var rootCmd = &cobra.Command{
 	Long:             `Odoo-one-click is wrapper to install and run odoo easily.`,
 	Version:          config.VERSION,
 	TraverseChildren: true,
-	Run: func(cmd *cobra.Command, args []string) {
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		Logger = utils.Logger(config.Verbose)
-
+		os.Setenv("PYENV_ROOT", config.PyenvBin())
+		os.Setenv("PATH", fmt.Sprintf("%s:%s", config.PyenvBin(), os.Getenv("PATH")))
+		installed, _ := isPyenvInstalled()
+		if installed {
+			exec.Command("eval", "$(pyenv init -)").Run()
+			exec.Command("eval", "$(pyenv virtualenv-init -)").Run()
+		}
+		return nil
+	},
+	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Hei hoi!")
 		fmt.Println("Use --help to see available commands")
 	},
