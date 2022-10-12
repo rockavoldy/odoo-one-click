@@ -3,8 +3,10 @@ name: Build and release
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  # TODO: need to create unit test, and run the test when do PR to branches main
+  # pull_request:
+  #   branches: [ "main" ]
+
 
 jobs:
   build:
@@ -84,11 +86,19 @@ jobs:
         go mod tidy
         go fmt ./...
 
-    - name: Build
+    - name: Build amd64
       if: env.BUMP_TAG != 'NULL'
       run: |
         GOOS=linux GOARCH=amd64 go build -ldflags "-X odoo-one-click/config.VERSION=${{ env.BUMP_TAG }}" -o odoo-one-click .
         zip odoo-one-click_amd64.zip odoo-one-click
+        rm -f odoo-one-click
+
+    - name: Build arm64
+      if: env.BUMP_TAG != 'NULL'
+      run: |
+        GOOS=linux GOARCH=arm64 go build -ldflags "-X odoo-one-click/config.VERSION=${{ env.BUMP_TAG }}" -o odoo-one-click .
+        zip odoo-one-click_arm64.zip odoo-one-click
+        rm -f odoo-one-click
 
 
     - name: Delete old prerelease tag with v0.x.x

@@ -43,8 +43,6 @@ var installCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if isEnterprise {
-			Logger = utils.Logger(config.Verbose)
-
 			// when enterprise is checked, ask for github username and token
 			reader := bufio.NewReader(os.Stdin)
 			fmt.Print("Enter github username: ")
@@ -89,7 +87,8 @@ type InstallConf struct {
 
 func NewInstallConf(isEnterprise bool, odooVer, pythonVer, dbName, ghUser, ghToken, dirName string) *InstallConf {
 	if isEnterprise && (ghUser == "" || ghToken == "") {
-		Logger.Fatalln("Please provide github username and token to clone odoo enterprise.")
+		fmt.Println("Please provide github username and token to clone odoo enterprise.")
+		os.Exit(1)
 	}
 	return &InstallConf{
 		isEnterprise: isEnterprise,
@@ -105,9 +104,9 @@ func NewInstallConf(isEnterprise bool, odooVer, pythonVer, dbName, ghUser, ghTok
 func (ic InstallConf) InstallOdoo() {
 	Logger.Println("Installing Odoo")
 	if !ic.isEnterprise {
-		fmt.Printf("Cloning odoo %s community", ic.odooVer)
+		fmt.Printf("Cloning odoo %s community\n", ic.odooVer)
 	} else {
-		fmt.Printf("Cloning odoo %s enterprise", ic.odooVer)
+		fmt.Printf("Cloning odoo %s enterprise\n", ic.odooVer)
 	}
 	err := ic.cloneOdooCommunity()
 	if err != nil {

@@ -30,6 +30,11 @@ func OdooDir() string {
 	return home + "/odoo"
 }
 
+func PyenvBin() string {
+	home, _ := os.UserHomeDir()
+	return home + "/.pyenv"
+}
+
 var allowedOS = map[string]bool{
 	"focal":   true,
 	"groovy":  true,

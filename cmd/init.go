@@ -20,14 +20,13 @@ var initCmd = &cobra.Command{
 	Short: "First initialization, install pyenv, configure postgresql and clone odoo",
 	Long:  "First initialization for installing pyenv, configure postgresql, and clone odoo",
 	Run: func(cmd *cobra.Command, args []string) {
-		Logger = utils.Logger(config.Verbose)
-
 		CheckRequirement()
 		checkPyenv()
 	},
 }
 
 func CheckRequirement() {
+	fmt.Println("Checking requirement")
 	// first, need to confirm if it is ubuntu or derivatives
 	listOfDeps := []string{"postgresql", "postgresql-client", "libxml2-dev", "libxslt1-dev", "libldap2-dev", "libsasl2-dev", "libtiff5-dev", "libjpeg8-dev", "libopenjp2-7-dev", "zlib1g-dev", "libfreetype6-dev", "liblcms2-dev", "libwebp-dev", "libharfbuzz-dev", "libpq-dev", "git", "libsqlite3-dev", "libreadline-dev", "libbz2-dev", "tk-dev"}
 
@@ -45,18 +44,21 @@ func CheckRequirement() {
 	}
 
 	if len(notInstalledDeps) > 0 {
+		fmt.Println("Seems like you don't have all the dependencies installed, installing dependencies")
+
 		// When there is still missing dependencies, install them
-		fmt.Printf("Install missing dependencies: %s\n", strings.Join(notInstalledDeps, " "))
 		err := utils.CheckSudoAccess()
 		if err != nil {
 			Logger.Fatalln("Wrong password: ", err)
 		}
 
+		fmt.Println("Update apt repositories, please wait...")
 		err = exec.Command("sudo", "apt-get", "update").Run()
 		if err != nil {
 			Logger.Fatalln("Failed to update repositories: ", err)
 		}
 
+		fmt.Println("Installing dependencies, please wait...")
 		cmdAptInstall := []string{"apt-get", "install", "-y"}
 		cmdAptInstall = utils.PrependCommand(notInstalledDeps, cmdAptInstall)
 
@@ -65,6 +67,7 @@ func CheckRequirement() {
 			Logger.Fatalln("Install dependencies: ", err)
 		}
 
+		fmt.Println("Dependencies installed")
 		err = exec.Command("sudo", "service", "postgresql", "start").Run()
 		if err != nil {
 			Logger.Fatalln("Failed to start postgresql: ", err)
@@ -89,7 +92,7 @@ func CheckRequirement() {
 		fmt.Println("Database successfully configured")
 	}
 
-	fmt.Printf("User database %s with password %s have superuser access", config.DBUsername(), config.DB_PASSWORD)
+	fmt.Printf("User database %s with password %s now have superuser access\n", config.DBUsername(), config.DB_PASSWORD)
 }
 
 func checkDBAccess() (bool, error) {
@@ -109,16 +112,16 @@ func checkDBAccess() (bool, error) {
 func configureDB() error {
 	// TODO: Add validation first, to make sure no create command again executed
 	os.Setenv("PGPASSWORD", config.DB_PASSWORD)
-	psqlScript := fmt.Sprintf(`psql -c "CREATE ROLE %s SUPERUSER LOGIN PASSWORD '%s';"`, config.DBUsername(), config.DB_PASSWORD)
+	psqlScript := fmt.Sprintf(`psql -h %s -U %s -c "CREATE ROLE %s SUPERUSER LOGIN PASSWORD '%s';"`, config.DB_HOST, config.DBUsername(), config.DBUsername(), config.DB_PASSWORD)
 	err := exec.Command("sudo", "su", "-", "postgres", "-c", psqlScript).Run()
 	if err != nil {
-		return err
+		Logger.Println("Create role: ", err.Error())
 	}
 
 	// if db for the user already exist, there is no need to new one, so this will return error
-	_ = exec.Command("createdb", config.DBUsername()).Run()
+	err = exec.Command("createdb", "-h", config.DB_HOST, "-U", config.DBUsername(), config.DBUsername()).Run()
 	if err != nil {
-		return nil
+		Logger.Println("Create database: ", err.Error())
 	}
 
 	return nil
@@ -134,7 +137,13 @@ func isPyenvInstalled() (bool, error) {
 }
 
 func installPyenv() (bool, error) {
-	err := exec.Command("bash", "-c", "curl https://pyenv.run | bash").Run()
+	pyenvScript := exec.Command("curl", "https://pyenv.run")
+	runBash := exec.Command("bash")
+	runBash.Stdin, _ = pyenvScript.StdoutPipe()
+	runBash.Stdout = os.Stdout
+	_ = runBash.Start()
+	_ = pyenvScript.Run()
+	err := runBash.Wait()
 	if err != nil {
 		return false, err
 	}

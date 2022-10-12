@@ -7,10 +7,10 @@ import (
 	"os"
 )
 
-func Logger(isDiscard bool) *log.Logger {
-	out := io.Writer(os.Stderr)
-	if isDiscard {
-		out = io.Discard
+func Logger(isVerbose bool) *log.Logger {
+	out := io.Discard
+	if isVerbose {
+		out = io.Writer(os.Stderr)
 	}
 
 	var (
