@@ -17,8 +17,8 @@ func init() {
 
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "First initialization, install pyenv, configure postgresql and clone odoo",
-	Long:  "First initialization for installing pyenv, configure postgresql, and clone odoo",
+	Short: "First initialization to install pyenv, and configure postgresql",
+	Long:  "First initialization to install pyenv, and configure postgresql for local development",
 	Run: func(cmd *cobra.Command, args []string) {
 		CheckRequirement()
 		checkPyenv()
@@ -26,9 +26,10 @@ var initCmd = &cobra.Command{
 }
 
 func CheckRequirement() {
+	// Check requirement for ubuntu and derivatives
 	fmt.Println("Checking requirement")
-	// first, need to confirm if it is ubuntu or derivatives
-	listOfDeps := []string{"postgresql", "postgresql-client", "libxml2-dev", "libxslt1-dev", "libldap2-dev", "libsasl2-dev", "libtiff5-dev", "libjpeg8-dev", "libopenjp2-7-dev", "zlib1g-dev", "libfreetype6-dev", "liblcms2-dev", "libwebp-dev", "libharfbuzz-dev", "libpq-dev", "git", "libsqlite3-dev", "libreadline-dev", "libbz2-dev", "tk-dev"}
+
+	listOfDeps := []string{"build-essential", "postgresql", "postgresql-client", "libxml2-dev", "libssl-dev", "libffi-dev", "libxslt1-dev", "libldap2-dev", "libsasl2-dev", "libtiff5-dev", "libjpeg8-dev", "libopenjp2-7-dev", "zlib1g-dev", "libfreetype6-dev", "liblcms2-dev", "libwebp-dev", "libharfbuzz-dev", "libpq-dev", "git", "libsqlite3-dev", "libreadline-dev", "libbz2-dev", "tk-dev"}
 
 	notInstalledDeps := make([]string, 0)
 
@@ -92,7 +93,9 @@ func CheckRequirement() {
 		fmt.Println("Database successfully configured")
 	}
 
-	fmt.Printf("User database %s with password %s now have superuser access\n", config.DBUsername(), config.DB_PASSWORD)
+	fmt.Printf("Database user '%s' with password '%s' created with superuser access\n", config.DBUsername(), config.DB_PASSWORD)
+
+	utils.PyenvInfoBash()
 }
 
 func checkDBAccess() (bool, error) {

@@ -6,7 +6,6 @@ import (
 	"odoo-one-click/config"
 	"odoo-one-click/utils"
 	"os"
-	"os/exec"
 
 	"github.com/spf13/cobra"
 )
@@ -21,13 +20,6 @@ var rootCmd = &cobra.Command{
 	TraverseChildren: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		Logger = utils.Logger(config.Verbose)
-		os.Setenv("PYENV_ROOT", config.PyenvBin())
-		os.Setenv("PATH", fmt.Sprintf("%s:%s", config.PyenvBin(), os.Getenv("PATH")))
-		installed, _ := isPyenvInstalled()
-		if installed {
-			exec.Command("eval", "$(pyenv init -)").Run()
-			exec.Command("eval", "$(pyenv virtualenv-init -)").Run()
-		}
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
