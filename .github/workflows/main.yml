@@ -100,7 +100,6 @@ jobs:
         zip odoo-one-click_arm64.zip odoo-one-click
         rm -f odoo-one-click
 
-
     - name: Delete old prerelease tag with v0.x.x
       if: (env.OLD_PRE_TAG == env.BUMP_TAG) && (env.BUMP_TAG != 'NULL')
       uses: dev-drprasad/delete-tag-and-release@v0.2.0

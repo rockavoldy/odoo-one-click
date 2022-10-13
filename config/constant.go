@@ -30,7 +30,7 @@ func OdooDir() string {
 	return home + "/odoo"
 }
 
-func PyenvBin() string {
+func PyenvDir() string {
 	home, _ := os.UserHomeDir()
 	return home + "/.pyenv"
 }

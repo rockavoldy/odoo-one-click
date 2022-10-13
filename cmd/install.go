@@ -30,7 +30,7 @@ func init() {
 
 var installCmd = &cobra.Command{
 	Use:   "install [flags] directory_name",
-	Short: "Install and configure odoo",
+	Short: "clone and configure odoo",
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) > 1 {
 			return fmt.Errorf("too many arguments")
@@ -40,6 +40,19 @@ var installCmd = &cobra.Command{
 		}
 
 		return nil
+	},
+	PreRun: func(cmd *cobra.Command, args []string) {
+		// Check first if pyenv already installed
+		if !utils.IsPyenvInstalled() {
+			fmt.Println("Please install pyenv first.")
+			os.Exit(1)
+		}
+		// Check if pyenv already configured
+		if !utils.IsPyenvConfigured() {
+			fmt.Println("Please follow following steps to configure pyenv, and run the command again.")
+			utils.PyenvInfoBash()
+			os.Exit(1)
+		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if isEnterprise {
@@ -125,24 +138,29 @@ func (ic InstallConf) InstallOdoo() {
 		Logger.Println("Initialize pyenv: ", err)
 	}
 
+	fmt.Println("Installing requirements")
 	err = ic.installOdooDeps()
 	if err != nil {
 		Logger.Println("Install odoo dependencies: ", err)
 	}
 
+	fmt.Println("Creating database")
 	err = exec.Command("createdb", ic.dbName).Run()
 	if err != nil {
 		Logger.Println("CreateDB odoo: ", err)
 	}
 
+	fmt.Println("Create odoo.conf file to run odoo")
 	err = ic.createOdooConf()
 	if err != nil {
 		Logger.Println("Create odoo conf: ", err)
 	}
 
 	dirName := utils.DirName(ic.odooVer, ic.isEnterprise)
-	fmt.Printf("Your odoo %s is ready to use at\n%s\n", dirName, config.OdooDir()+"/"+ic.dirName)
-	fmt.Println("for the first run, you need to initialize the db with base addons by add -i base")
+	fmt.Printf("Your odoo %s is ready to use at\n%s\n\n", dirName, config.OdooDir()+"/"+ic.dirName)
+	fmt.Println("for the first run, you need to initialize the db with base addons run this command")
+	fmt.Println("python3 odoo-bin -c odoo.conf -i base --stop-after-init")
+	fmt.Printf("\nNow you can run the odoo instance with 'python3 odoo-bin -c odoo.conf'\n")
 }
 
 func (ic InstallConf) cloneOdooCommunity() error {
@@ -187,17 +205,20 @@ func (ic InstallConf) cloneOdooEnterprise() error {
 
 func (ic InstallConf) initPyenv() error {
 	Logger.Println("Initializing pyenv")
+	fmt.Println("Check if python version needed by odoo already installed by pyenv")
 	isPyVerInstalled, err := utils.CheckPythonInstalled(ic.pythonVer)
 	if err != nil {
 		Logger.Println(err)
 	}
 
 	if !isPyVerInstalled {
+		fmt.Println("Installing python version needed by odoo, please wait...")
 		err := exec.Command("pyenv", "install", ic.pythonVer).Run()
 		if err != nil {
 			return err
 		}
 	}
+	fmt.Printf("python %s already installed with pyenv\n", ic.pythonVer)
 
 	isVenvCreated, err := utils.CheckVenvCreated(ic.dirName)
 	if err != nil {
@@ -205,6 +226,7 @@ func (ic InstallConf) initPyenv() error {
 	}
 
 	if !isVenvCreated {
+		fmt.Println("Creating virtual environment for odoo, please wait...")
 		err = exec.Command("pyenv", "virtualenv", ic.pythonVer, ic.dirName).Run()
 		if err != nil {
 			Logger.Println("Error on create venv: ", err)
@@ -212,6 +234,7 @@ func (ic InstallConf) initPyenv() error {
 		}
 	}
 
+	fmt.Println("Activating virtual environment for odoo, please wait...")
 	err = exec.Command("pyenv", "local", ic.dirName).Run()
 	if err != nil {
 		return err
@@ -222,6 +245,8 @@ func (ic InstallConf) initPyenv() error {
 
 func (ic InstallConf) installOdooDeps() error {
 	Logger.Println("Installing Odoo Dependencies")
+	_ = exec.Command("pip", "install", "setuptools==57.5", "wheel").Run()
+
 	err := exec.Command("pip", "install", "-r", "requirements.txt").Run()
 	if err != nil {
 		return err
@@ -238,22 +263,7 @@ func (ic InstallConf) installOdooDeps() error {
 
 func (ic InstallConf) createOdooConf() error {
 	Logger.Println("Creating Odoo Configuration")
-	confFile := fmt.Sprintf(`
-[options]
-admin_passwd = admin
-db_host = localhost
-db_port = 5432
-db_user = %s
-db_password = %s
-db_name = %s
-addons_path = ./addons, ./odoo/addons`, config.DBUsername(), config.DB_PASSWORD, ic.dbName)
-
-	if ic.isEnterprise {
-		// When it's enterprise, add enterprise addons path to odoo.conf
-		confFile = confFile + ", ./enterprise\n"
-	} else {
-		confFile = confFile + "\n"
-	}
+	confFile := utils.OdooConf(ic.isEnterprise, config.DBUsername(), config.DB_PASSWORD, ic.dbName)
 
 	err := os.WriteFile("odoo.conf", []byte(confFile), 0644)
 	if err != nil {
