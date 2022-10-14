@@ -115,7 +115,7 @@ func checkDBAccess() (bool, error) {
 func configureDB() error {
 	// TODO: Add validation first, to make sure no create command again executed
 	os.Setenv("PGPASSWORD", config.DB_PASSWORD)
-	psqlScript := fmt.Sprintf(`psql -h %s -U %s -c "CREATE ROLE %s SUPERUSER LOGIN PASSWORD '%s';"`, config.DB_HOST, config.DBUsername(), config.DBUsername(), config.DB_PASSWORD)
+	psqlScript := fmt.Sprintf(`psql -c "CREATE ROLE %s SUPERUSER LOGIN PASSWORD '%s';"`, config.DBUsername(), config.DB_PASSWORD)
 	err := exec.Command("sudo", "su", "-", "postgres", "-c", psqlScript).Run()
 	if err != nil {
 		Logger.Println("Create role: ", err.Error())
