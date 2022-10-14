@@ -34,12 +34,11 @@ func DirName(odooVer string, isEnterprise bool) string {
 
 func CheckPythonInstalled(pythonVer string) (bool, error) {
 	bashCommand := fmt.Sprintf("pyenv versions | grep %s", pythonVer)
-	out, err := exec.Command("bash", "-c", bashCommand).Output()
+	err := exec.Command("bash", "-c", bashCommand).Run()
 	if err != nil {
 		return false, err
 	}
 
-	log.Println(string(out))
 	return true, nil
 }
 
