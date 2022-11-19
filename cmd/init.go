@@ -93,14 +93,14 @@ func CheckRequirement() {
 		fmt.Println("Database successfully configured")
 	}
 
-	fmt.Printf("Database user '%s' with password '%s' created with superuser access\n", config.DBUsername(), config.DB_PASSWORD)
+	fmt.Printf("Database user '%s' with password '%s' created with superuser access\n", config.DbUsername(), config.DbPassword())
 
 	utils.PyenvInfoBash()
 }
 
 func checkDBAccess() (bool, error) {
-	os.Setenv("PGPASSWORD", config.DB_PASSWORD)
-	psqlCmd := fmt.Sprintf("psql -h %s -p %s -U %s -c 'SELECT 1'", config.DB_HOST, config.DB_PORT, config.DBUsername())
+	os.Setenv("PGPASSWORD", config.DbPassword())
+	psqlCmd := fmt.Sprintf("psql -h %s -p %s -U %s -c 'SELECT 1'", config.DbHost(), config.DbPort(), config.DbUsername())
 
 	err := exec.Command("bash", "-c", psqlCmd).Run()
 	if err != nil {
@@ -114,15 +114,15 @@ func checkDBAccess() (bool, error) {
 
 func configureDB() error {
 	// TODO: Add validation first, to make sure no create command again executed
-	os.Setenv("PGPASSWORD", config.DB_PASSWORD)
-	psqlScript := fmt.Sprintf(`psql -c "CREATE ROLE %s SUPERUSER LOGIN PASSWORD '%s';"`, config.DBUsername(), config.DB_PASSWORD)
+	os.Setenv("PGPASSWORD", config.DbPassword())
+	psqlScript := fmt.Sprintf(`psql -c "CREATE ROLE %s SUPERUSER LOGIN PASSWORD '%s';"`, config.DbUsername(), config.DbPassword())
 	err := exec.Command("sudo", "su", "-", "postgres", "-c", psqlScript).Run()
 	if err != nil {
 		Logger.Println("Create role: ", err.Error())
 	}
 
 	// if db for the user already exist, there is no need to new one, so this will return error
-	err = exec.Command("createdb", "-h", config.DB_HOST, "-U", config.DBUsername(), config.DBUsername()).Run()
+	err = exec.Command("createdb", "-h", config.DbHost(), "-U", config.DbUsername(), config.DbUsername()).Run()
 	if err != nil {
 		Logger.Println("Create database: ", err.Error())
 	}
@@ -174,7 +174,7 @@ func checkPyenv() {
 	}
 
 	if _, err := os.Stat(config.OdooDir()); os.IsNotExist(err) {
-		err = os.MkdirAll(config.OdooDir(), config.ODOO_PERMISSION)
+		err = os.MkdirAll(config.OdooDir(), config.OdooPermission())
 		if err != nil {
 			Logger.Fatalln(err)
 		}

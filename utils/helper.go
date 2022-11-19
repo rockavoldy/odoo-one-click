@@ -32,6 +32,15 @@ func DirName(odooVer string, isEnterprise bool) string {
 	return strings.Split(odooVer, ".")[0] + "c"
 }
 
+func CheckCmdExist(cmd string) error {
+	_, err := exec.LookPath(cmd)
+	if err != nil {
+		return fmt.Errorf("command %s not found", cmd)
+	}
+
+	return nil
+}
+
 func CheckPythonInstalled(pythonVer string) (bool, error) {
 	bashCommand := fmt.Sprintf("pyenv versions | grep %s", pythonVer)
 	err := exec.Command("bash", "-c", bashCommand).Run()
