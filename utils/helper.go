@@ -123,19 +123,39 @@ addons_path = ./addons, ./odoo/addons`, dbUser, dbPass, dbName)
 	return confFile
 }
 
-func PyenvInfoBash() {
+func CurrentShell() string {
+	envShell := strings.Split(os.Getenv("SHELL"), "/")
+	return envShell[len(envShell)-1]
+}
+
+func PyenvInfo() {
+	shell := CurrentShell()
 	fmt.Println()
-	fmt.Println("One more thing you need to do, please add this line to your ~/.bashrc file:")
+	fmt.Printf("One more thing you need to do, please add this line to your ~/.%src file:\n", shell)
 	fmt.Println("(Just copy and paste to your terminal line per line)")
 	fmt.Println()
-	fmt.Println(`echo 'PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc`)
-	fmt.Println(`echo 'PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc`)
-	fmt.Println(`echo 'eval "$(pyenv init -)"' >> ~/.bashrc`)
-	fmt.Println(`echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc`)
+	fmt.Printf("echo 'PYENV_ROOT=\"$HOME/.pyenv\"' >> ~/.%src\n", shell)
+	fmt.Printf("echo 'PATH=\"$PYENV_ROOT/bin:$PATH\"' >> ~/.%src\n", shell)
+	fmt.Printf("echo 'eval \"$(pyenv init -)\"' >> ~/.%src\n", shell)
+	fmt.Printf("echo 'eval \"$(pyenv virtualenv-init -)\"' >> ~/.%src\n", shell)
 	fmt.Println()
-	fmt.Println("Then run this command to reload your bashrc file")
-	fmt.Println("source ~/.bashrc")
-	fmt.Printf("\n\nIf you have zsh as your shell, changes '~/.bashrc' here with '~/.zshrc'\n\n")
+	fmt.Printf("Then run this command to reload your %src\n", shell)
+	fmt.Printf("source ~/.%src\n\n", shell)
+}
+
+func CheckUbuntuVersion() error {
+	out, err := exec.Command("bash", "-c", "source /etc/os-release; echo $UBUNTU_CODENAME").Output()
+	if err != nil {
+		return err
+	}
+
+	// check if UBUNTU_CODENAME on allowedOS
+	codename := RemoveNewLine(string(out))
+	if !config.IsAllowedOS(codename) {
+		return fmt.Errorf("ubuntu version is not supported")
+	}
+
+	return nil
 }
 
 func IsPyenvConfigured() bool {

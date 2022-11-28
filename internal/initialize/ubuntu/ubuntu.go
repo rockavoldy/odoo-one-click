@@ -13,6 +13,14 @@ type UbuntuInitializer struct {
 	*initialize.DefaultInitializer
 }
 
+func NewUbuntuInitializer() *UbuntuInitializer {
+	return &UbuntuInitializer{
+		DefaultInitializer: &initialize.DefaultInitializer{
+			Shell: utils.CurrentShell(),
+		},
+	}
+}
+
 func (u *UbuntuInitializer) CheckAdminAccess() error {
 	err := exec.Command("sudo", "whoami").Run()
 	if err != nil {
@@ -61,42 +69,29 @@ func (u *UbuntuInitializer) CheckDB() error {
 	os.Setenv("PGPASSWORD", config.DbPassword())
 
 	psqlCmd := fmt.Sprintf("psql -h %s -p %s -U %s postgres -c 'SELECT 1'", config.DbHost(), config.DbPort(), config.DbUsername())
-	err = exec.Command("bash", "-c", psqlCmd).Run()
+	err = exec.Command(u.Shell, "-c", psqlCmd).Run()
 	if err != nil {
 		return fmt.Errorf("can't connect to postgresql: %w", err)
 	}
 
 	return nil
-
-	// TODO: Uncomment this if above is not working properly
-	// psqlCmd := fmt.Sprintf("psql -h %s -p %s -U %s -c 'SELECT 1'", config.DbHost(), config.DbPort(), config.DbUsername())
-	// err = exec.Command("bash", "-c", psqlCmd).Run()
-	// if err != nil {
-	// 	// When it can't connect to the database, try to create the db first
-	// 	psqlCmd = fmt.Sprintf("createdb -h %s -p %s -U %s %s", config.DbHost(), config.DbPort(), config.DbUsername(), config.DbUsername())
-	// 	err = exec.Command("bash", "-c", psqlCmd).Run()
-	// 	if err != nil {
-	// 		// Can't create db, return error
-	// 		return fmt.Errorf("failed to create database: %w", err)
-	// 	}
-
-	// 	// Last check if it can connect to the database
-	// 	psqlCmd = fmt.Sprintf("psql -h %s -p %s -U %s -c 'SELECT 1'", config.DbHost(), config.DbPort(), config.DbUsername())
-	// 	err = exec.Command("bash", "-c", psqlCmd).Run()
-	// 	if err != nil {
-	// 		return fmt.Errorf("failed to connect to database: %w", err)
-	// 	}
-	// }
-
-	// return nil
 }
 
 func (u *UbuntuInitializer) ConfigureDB() error {
+	err := u.CheckDB()
+	if err == nil {
+		return nil
+	}
 	os.Setenv("PGPASSWORD", config.DbPassword())
 	psqlScript := fmt.Sprintf(`psql -c "CREATE ROLE %s SUPERUSER LOGIN PASSWORD '%s';"`, config.DbUsername(), config.DbPassword())
-	err := exec.Command("sudo", "su", "-", "postgres", "-c", psqlScript).Run()
+	err = exec.Command("sudo", "su", "-", "postgres", "-c", psqlScript).Run()
 	if err != nil {
 		return fmt.Errorf("failed to create postgre role: %w", err)
+	}
+
+	err = u.CheckDB()
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -110,6 +105,7 @@ func (u *UbuntuInitializer) CheckPyenv() error {
 
 	err = exec.Command("pyenv", "--version").Run()
 	if err != nil {
+		utils.PyenvInfo()
 		return err
 	}
 
@@ -118,7 +114,7 @@ func (u *UbuntuInitializer) CheckPyenv() error {
 
 func (u *UbuntuInitializer) InstallPyenv() error {
 	pyenvScript := exec.Command("curl", "https://pyenv.run")
-	runBash := exec.Command("bash")
+	runBash := exec.Command(u.Shell)
 	runBash.Stdin, _ = pyenvScript.StdoutPipe()
 	runBash.Stdout = os.Stdout
 	_ = runBash.Start()
@@ -128,9 +124,20 @@ func (u *UbuntuInitializer) InstallPyenv() error {
 		return err
 	}
 
-	err = exec.Command("bash", "-c", "exec $SHELL").Run()
+	err = exec.Command(u.Shell, "-c", "exec $SHELL").Run()
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (u *UbuntuInitializer) ConfigurePyenv() error {
+	if err := u.CheckPyenv(); err != nil {
+		err = u.InstallPyenv()
+		if err != nil {
+			utils.PyenvInfo()
+		}
 	}
 
 	return nil
