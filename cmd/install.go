@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"odoo-one-click/config"
+	"odoo-one-click/internal/initialize/ubuntu"
 	"odoo-one-click/utils"
 	"os"
 	"os/exec"
@@ -42,15 +43,9 @@ var installCmd = &cobra.Command{
 		return nil
 	},
 	PreRun: func(cmd *cobra.Command, args []string) {
-		// Check first if pyenv already installed
-		if !utils.IsPyenvInstalled() {
+		// check if pyenv is installed
+		if err := ubuntu.NewUbuntuInitializer().CheckPyenv(); err != nil {
 			fmt.Println("Please install pyenv first.")
-			os.Exit(1)
-		}
-		// Check if pyenv already configured
-		if !utils.IsPyenvConfigured() {
-			fmt.Println("Please follow following steps to configure pyenv, and run the command again.")
-			utils.PyenvInfoBash()
 			os.Exit(1)
 		}
 	},
@@ -263,7 +258,7 @@ func (ic InstallConf) installOdooDeps() error {
 
 func (ic InstallConf) createOdooConf() error {
 	Logger.Println("Creating Odoo Configuration")
-	confFile := utils.OdooConf(ic.isEnterprise, config.DBUsername(), config.DB_PASSWORD, ic.dbName)
+	confFile := utils.OdooConf(ic.isEnterprise, config.DbUsername(), config.DbPassword(), ic.dbName)
 
 	err := os.WriteFile("odoo.conf", []byte(confFile), 0644)
 	if err != nil {
