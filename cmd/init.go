@@ -29,7 +29,7 @@ func CheckRequirement() {
 	// Check requirement for ubuntu and derivatives
 	fmt.Println("Checking requirement")
 
-	listOfDeps := []string{"build-essential", "postgresql", "postgresql-client", "libxml2-dev", "libssl-dev", "libffi-dev", "libxslt1-dev", "libldap2-dev", "libsasl2-dev", "libtiff5-dev", "libjpeg8-dev", "libopenjp2-7-dev", "zlib1g-dev", "libfreetype6-dev", "liblcms2-dev", "libwebp-dev", "libharfbuzz-dev", "libpq-dev", "curl", "git", "libsqlite3-dev", "libreadline-dev", "libbz2-dev", "tk-dev"}
+	listOfDeps := []string{"build-essential", "postgresql", "postgresql-client", "libxml2-dev", "libssl-dev", "libffi-dev", "libxslt1-dev", "libldap2-dev", "libsasl2-dev", "libtiff5-dev", "libjpeg8-dev", "libopenjp2-7-dev", "zlib1g-dev", "libfreetype6-dev", "liblcms2-dev", "libwebp-dev", "libharfbuzz-dev", "libpq-dev", "curl", "wget", "git", "libsqlite3-dev", "libreadline-dev", "libbz2-dev", "tk-dev"}
 
 	notInstalledDeps := make([]string, 0)
 
