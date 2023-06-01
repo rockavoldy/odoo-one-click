@@ -253,7 +253,7 @@ func (ic InstallConf) installOdooDeps() error {
 	}
 
 	// handle this issue https://github.com/odoo/odoo/issues/99809, because it seems affect odoo 13 and up
-	err = exec.Command("pip", "install", "pyopenssl==22.0.0").Run()
+	err = exec.Command("pip", "install", "pyopenssl==22.0.0", "cryptography==37.0.4").Run()
 	if err != nil {
 		return err
 	}
