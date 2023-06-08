@@ -102,7 +102,7 @@ jobs:
 
     - name: Delete old prerelease tag with v0.x.x
       if: (env.OLD_PRE_TAG == env.BUMP_TAG) && (env.BUMP_TAG != 'NULL')
-      uses: dev-drprasad/delete-tag-and-release@v0.2.0
+      uses: dev-drprasad/delete-tag-and-release@v0.2.1
       with:
         delete_release: true
         tag_name: ${{ env.OLD_PRE_TAG }}
