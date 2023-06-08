@@ -11,18 +11,33 @@ import (
 
 type UbuntuInitializer struct {
 	*initialize.DefaultInitializer
+	withSudo bool
 }
 
 func NewUbuntuInitializer() *UbuntuInitializer {
+	var withSudo bool
+	if err := utils.CheckCmdExist("sudo"); err != nil {
+		withSudo = false
+	} else {
+		withSudo = true
+	}
+
 	return &UbuntuInitializer{
 		DefaultInitializer: &initialize.DefaultInitializer{
 			Shell: utils.CurrentShell(),
 		},
+		withSudo: withSudo,
 	}
 }
 
 func (u *UbuntuInitializer) CheckAdminAccess() error {
-	err := exec.Command("sudo", "whoami").Run()
+	var err error
+	if u.withSudo {
+		err = exec.Command("sudo", "whoami").Run()
+	} else {
+		err = exec.Command("whoami").Run()
+	}
+
 	if err != nil {
 		return err
 	}
@@ -38,9 +53,28 @@ func (u *UbuntuInitializer) CheckRequirement() ([]string, error) {
 
 	notInstalledDeps := make([]string, 0)
 	for _, dep := range ubuntuDeps {
-		err := exec.Command("dpkg", "--status", dep).Run()
+		var err error
+		if u.withSudo {
+			fmt.Println("sudo dpkg --status", dep)
+			err = exec.Command("sudo", "dpkg", "--status", dep).Run()
+		} else {
+			fmt.Println("dpkg --status", dep)
+			err = exec.Command("dpkg", "--status", dep).Run()
+		}
+
 		if err != nil {
 			notInstalledDeps = append(notInstalledDeps, dep)
+		}
+	}
+
+	if len(notInstalledDeps) > 0 {
+		// apt-get update
+		if u.withSudo {
+			fmt.Println("sudo apt-get update")
+			exec.Command("sudo", "apt-get", "update").Run()
+		} else {
+			fmt.Println("apt-get update")
+			exec.Command("apt-get", "update").Run()
 		}
 	}
 
@@ -49,9 +83,16 @@ func (u *UbuntuInitializer) CheckRequirement() ([]string, error) {
 
 func (u *UbuntuInitializer) InstallDeps(deps []string) error {
 	fmt.Println("Installing dependencies, please wait...")
-	cmdAptInstall := []string{"apt-get", "install", "-y"}
-	cmdAptInstall = utils.PrependCommand(deps, cmdAptInstall)
-	err := exec.Command("sudo", cmdAptInstall...).Run()
+	var err error
+	if u.withSudo {
+		cmdAptInstall := []string{"apt-get", "install", "-y"}
+		cmdAptInstall = utils.PrependCommand(deps, cmdAptInstall)
+		exec.Command("sudo", cmdAptInstall...).Run()
+	} else {
+		cmdAptInstall := []string{"install", "-y"}
+		cmdAptInstall = utils.PrependCommand(deps, cmdAptInstall)
+		exec.Command("apt-get", cmdAptInstall...).Run()
+	}
 	if err != nil {
 		return fmt.Errorf("failed to install dependencies: %w", err)
 	}
@@ -82,9 +123,15 @@ func (u *UbuntuInitializer) ConfigureDB() error {
 	if err == nil {
 		return nil
 	}
+	err = nil
 	os.Setenv("PGPASSWORD", config.DbPassword())
-	psqlScript := fmt.Sprintf(`psql -c "CREATE ROLE %s SUPERUSER LOGIN PASSWORD '%s';"`, config.DbUsername(), config.DbPassword())
-	err = exec.Command("sudo", "su", "-", "postgres", "-c", psqlScript).Run()
+	if u.withSudo {
+		psqlScript := fmt.Sprintf(`psql -c "CREATE ROLE %s SUPERUSER LOGIN PASSWORD '%s';"`, config.DbUsername(), config.DbPassword())
+		err = exec.Command("sudo", "su", "-", "postgres", "-c", psqlScript).Run()
+	} else {
+		psqlScript := fmt.Sprintf(`psql -c "CREATE ROLE %s SUPERUSER LOGIN PASSWORD '%s';"`, config.DbUsername(), config.DbPassword())
+		err = exec.Command("su", "-", "postgres", "-c", psqlScript).Run()
+	}
 	if err != nil {
 		return fmt.Errorf("failed to create postgre role: %w", err)
 	}
@@ -113,13 +160,8 @@ func (u *UbuntuInitializer) CheckPyenv() error {
 }
 
 func (u *UbuntuInitializer) InstallPyenv() error {
-	pyenvScript := exec.Command("curl", "https://pyenv.run")
-	runBash := exec.Command(u.Shell)
-	runBash.Stdin, _ = pyenvScript.StdoutPipe()
-	runBash.Stdout = os.Stdout
-	_ = runBash.Start()
-	_ = pyenvScript.Run()
-	err := runBash.Wait()
+	pyenvScript := exec.Command("curl", "https://pyenv.run", "|", u.Shell)
+	err := pyenvScript.Run()
 	if err != nil {
 		return err
 	}
