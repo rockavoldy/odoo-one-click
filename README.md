@@ -27,6 +27,11 @@ Odoo-one-click, help you to setup your odoo instances with just 1 command.
 5. Restart your terminal, and Done!. You can now use `odoo-one-click` command
 
 ## Usage
+- First thing first, if you're not currently using ubuntu, but you're sure your distro is derivatives of Ubuntu, please add this env to your system
+    ```sh
+    export SKIP_UBUNTU_CHECK=YES
+    ```
+    > Need a better way to determine if the OS or distro is supported or not
 - If it is your first time using `odoo-one-click`, you need to run `init` command to setup your system
     ```sh
     odoo-one-click init
