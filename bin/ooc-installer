@@ -32,7 +32,18 @@ fi
 
 wget "$asset_url" -O "$asset_name"
 
-unzip "$asset_name" -d /tmp/
+conditional_mv() {
+  [ -d "$2" ] || mkdir -p "$2" && mv "$1"/* "$2"
+}
+
+TMP_DIR=$(mktemp -d)
+
+unzip "$asset_name" -d "$TMR_DIR"
 sudo su
-mv /tmp/odoo-one-click /usr/local/bin/odoo-one-click
+conditional_mv "$TMP_DIR/odoo-one-click" "/usr/local/bin/odoo-one-click"
 chmod +x /usr/local/bin/odoo-one-click
+
+if ! command -v odoo-one-click 1>/dev/null; then
+  echo "odoo-one-click: seems 'odoo-one-click' stil not in path, please make sure '/usr/local/bin' already in your path and reload your terminal." >&2
+  exit 1
+fi

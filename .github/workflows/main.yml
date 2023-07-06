@@ -111,7 +111,7 @@ jobs:
 
     - name: Publish GitHub Release
       if: env.BUMP_TAG != 'NULL'
-      uses: ncipollo/release-action@v1.8.6
+      uses: ncipollo/release-action@v1.12.0
       with:
         prerelease: env.PRERELEASE
         artifacts: "*.zip"
