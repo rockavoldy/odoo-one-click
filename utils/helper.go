@@ -32,6 +32,19 @@ func DirName(odooVer string, isEnterprise bool) string {
 	return strings.Split(odooVer, ".")[0] + "c"
 }
 
+func CheckDirExist(path string) bool {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true
+	}
+
+	if os.IsNotExist(err) {
+		return false
+	}
+
+	return true
+}
+
 func CheckPythonInstalled(pythonVer string) (bool, error) {
 	bashCommand := fmt.Sprintf("pyenv versions | grep %s", pythonVer)
 	err := exec.Command("bash", "-c", bashCommand).Run()
@@ -137,4 +150,27 @@ func IsPyenvConfigured() bool {
 func IsPyenvInstalled() bool {
 	_, err := os.Stat(config.PyenvDir())
 	return err == nil
+}
+
+func ValidateOdooVer(odooVer string) bool {
+	// TODO: change this validation later by taking the data directly from github branches name, or using regex?
+	// Only allow Odoo 10 and plus since it's the versions i have tried myself
+	switch odooVer {
+	case "10.0":
+		return true
+	case "11.0":
+		return true
+	case "12.0":
+		return true
+	case "13.0":
+		return true
+	case "14.0":
+		return true
+	case "15.0":
+		return true
+	case "16.0":
+		return true
+	default:
+		return false
+	}
 }

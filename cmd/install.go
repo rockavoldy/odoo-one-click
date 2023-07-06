@@ -69,6 +69,10 @@ var installCmd = &cobra.Command{
 
 		if odooVer == "" {
 			odooVer = config.OdooVersion()
+		} else {
+			if valid := utils.ValidateOdooVer(odooVer); !valid {
+				fmt.Println("Your odoo version is not valid, please use any one of this\n10.0 11.0 12.0 13.0 14.0 15.0 16.0")
+			}
 		}
 
 		if dbName == "" {
@@ -173,6 +177,17 @@ func (ic InstallConf) cloneOdooCommunity() error {
 			os.Exit(1)
 		}
 		return err
+	}
+
+	idx := 1
+	for {
+		if exist := utils.CheckDirExist(config.OdooDir() + ic.dirName); !exist {
+			break
+		}
+
+		// When it's already exist, put index and try to check again
+		ic.dirName = fmt.Sprintf("%s%d", ic.dirName, idx)
+		idx++
 	}
 
 	err = exec.Command("git", "clone", "https://github.com/odoo/odoo", "--branch", ic.odooVer, "--depth", "1", ic.dirName).Run()
