@@ -34,17 +34,12 @@ fi
 
 # download, and move it to correct directory
 curl -LO "$asset_url" -o "$asset_name"
-# wget "$asset_url" -O "$asset_name"
-
-function conditional_mv() {
-  [ -d "$2" ] || mkdir -p "$2" && mv "$1"/* "$2"
-}
 
 TMP_DIR=$(mktemp -d)
 
-unzip "$asset_name" -d "$TMR_DIR"
-sudo su
-conditional_mv "$TMP_DIR/odoo-one-click" "/usr/local/bin/odoo-one-click"
+unzip "$asset_name"
+mv odoo-one-click $TMP_DIR
+mv "$TMP_DIR/odoo-one-click" "/usr/local/bin/odoo-one-click"
 
 rm -rf $TMP_DIR
 chmod +x /usr/local/bin/odoo-one-click
