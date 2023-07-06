@@ -2,15 +2,30 @@
 
 Odoo-one-click, help you to setup your odoo instances with just 1 command.
 
-## Roadmap
-- [x] Command init to prepare dependencies and requirement to run odoo
-- [x] Setup and configure postgresql to run odoo without using root
-- [x] Add some flags to customize your odoo installation
-- [x] Add validation on which OS can run the app
-- [ ] Add new command `run` to help run existing odoo instances
-- [ ] Make it available to other OSes (Mac, and other linux distributions)
+## Quick Start
+1. Make sure you have already installed the dependencies
+    ```sh
+    sudo apt update && sudo apt install -y curl jq unzip
+    ```
+2. Run this installer
+    ```sh
+    curl https://raw.githubusercontent.com/rockavoldy/odoo-one-click/main/bin/ooc-installer | bash
+    ```
+3. Wait for the installer to finish, and the command will be available on your terminal. Try to run with
+    ```sh
+    odoo-one-click --help
+    ```
+4. Now you can continue initialize by using command
+    ```sh
+    odoo-one-click init
+    ```
+5. And when it's finished, you can continue install Odoo 15 by using
+    ```sh
+    odoo-one-click install
+    ```
+6. Done!, follow the first initialization after your Odoo 15 successfully installed
 
-## Installation
+## Manual Installation
 1. Download compressed binary file on [Releases](https://github.com/rockavoldy/odoo-one-click/releases/latest)
 2. Extract using unzip
     ```sh
@@ -66,3 +81,13 @@ Odoo-one-click, help you to setup your odoo instances with just 1 command.
     -v, --verbose   Print logs to stdout
     ```
     > NOTE: directory_name here is optional, if you have more than 1 instances with the same odoo version, you need to specify the directory name so it won't conflict with the other instance
+
+## Roadmap
+- [x] Command init to prepare dependencies and requirement to run odoo
+- [x] Setup and configure postgresql to run odoo without using root
+- [x] Add some flags to customize your odoo installation
+- [x] Add validation on which OS can run the app
+- [x] Add auto-install script
+- [ ] Add a way to check and auto update the app
+- [ ] Add new command `run` to help run existing odoo instances
+- [ ] Make it available to other OSes (Mac, and other linux distributions)
