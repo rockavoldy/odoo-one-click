@@ -90,7 +90,7 @@ jobs:
       if: env.BUMP_TAG != 'NULL'
       run: |
         GOOS=linux GOARCH=amd64 go build -ldflags "-X odoo-one-click/config.VERSION=${{ env.BUMP_TAG }}" -o odoo-one-click .
-        zip odoo-one-click_amd64_config.VERSION=${{ env.BUMP_TAG }}.zip odoo-one-click
+        zip odoo-one-click_amd64_${{ env.BUMP_TAG }}.zip odoo-one-click
         rm -f odoo-one-click
 
     # - name: Build arm64
