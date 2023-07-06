@@ -3,7 +3,8 @@
 set -e
 [ -n "$OOC_DEBUG" ] && set -x
 
-if ! command -v wget 1>/dev/null 2>&1; then
+# Check all dependencies first
+if ! command -v curl 1>/dev/null 2>&1; then
   echo "odoo-one-click: wget is not installed, can't continue." >&2
   exit 1
 fi
@@ -18,19 +19,22 @@ if ! command -v unzip 1>/dev/null 2>&1; then
   exit 1
 fi
 
+# get latest release from repo
 release_info=$(curl -s "https://api.github.com/repos/rockavoldy/odoo-one-click/releases/latest")
 
+# and find it by the tag_name
 tag_name=$(echo "$release_info" | jq -r '.tag_name')
-#tag_name="amd64"
 asset_url=$(echo "$release_info" | jq -r --arg tag_name "$tag_name" '.assets[] | select(.name | contains($tag_name)) | .browser_download_url')
 asset_name=$(echo "$release_info" | jq -r --arg tag_name "$tag_name" '.assets[] | select(.name | contains($tag_name)) | .name')
 
-if ! $asset_name 1>/dev/null 2>&1; then
+if ! [ -n "$asset_name" ] 1>/dev/null 2>&1; then
   echo "odoo-one-click: no release detected, please create issues" >&2
   exit 1
 fi
 
-wget "$asset_url" -O "$asset_name"
+# download, and move it to correct directory
+curl -LO "$asset_url" -o "$asset_name"
+# wget "$asset_url" -O "$asset_name"
 
 conditional_mv() {
   [ -d "$2" ] || mkdir -p "$2" && mv "$1"/* "$2"
