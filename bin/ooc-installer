@@ -39,7 +39,7 @@ TMP_DIR=$(mktemp -d)
 
 unzip "$asset_name"
 mv odoo-one-click $TMP_DIR
-sudo mv "$TMP_DIR/odoo-one-click" "/usr/local/bin/odoo-one-click"
+sudo mv $TMP_DIR/odoo-one-click /usr/local/bin/odoo-one-click
 
 rm -rf $TMP_DIR
 sudo chmod +x /usr/local/bin/odoo-one-click
