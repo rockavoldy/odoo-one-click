@@ -11,6 +11,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix: 
+        goarch: [amd64, arm64]
+        goos: [linux, darwin]
     steps:
     - uses: actions/checkout@v3
     - name: Manage Version
@@ -86,19 +91,12 @@ jobs:
         go mod tidy
         go fmt ./...
 
-    - name: Build amd64
+    - name: Build and zip binary file
       if: env.BUMP_TAG != 'NULL'
       run: |
-        GOOS=linux GOARCH=amd64 go build -ldflags "-X odoo-one-click/config.VERSION=${{ env.BUMP_TAG }}" -o odoo-one-click .
-        zip odoo-one-click_amd64_${{ env.BUMP_TAG }}.zip odoo-one-click
+        GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "-X odoo-one-click/config.VERSION=${{ env.BUMP_TAG }}" -o odoo-one-click .
+        zip odoo-one-click_${{ matrix.goos }}_${{ matrix.goarch }}.zip odoo-one-click
         rm -f odoo-one-click
-
-    # - name: Build arm64
-    #   if: env.BUMP_TAG != 'NULL'
-    #   run: |
-    #     GOOS=linux GOARCH=arm64 go build -ldflags "-X odoo-one-click/config.VERSION=${{ env.BUMP_TAG }}" -o odoo-one-click .
-    #     zip odoo-one-click_arm64.zip odoo-one-click
-    #     rm -f odoo-one-click
 
     - name: Delete old prerelease tag with v0.x.x
       if: (env.OLD_PRE_TAG == env.BUMP_TAG) && (env.BUMP_TAG != 'NULL')
