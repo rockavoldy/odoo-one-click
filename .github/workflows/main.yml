@@ -16,6 +16,9 @@ jobs:
       matrix: 
         goarch: [amd64, arm64]
         goos: [linux, darwin]
+    outputs:
+      bump_tag: ${{ steps.set_output.outputs.bump_tag }}
+      old_pre_tag: ${{ steps.set_output.outputs.old_pre_tag }}
     steps:
     - uses: actions/checkout@v3
     - name: Manage Version
@@ -97,25 +100,32 @@ jobs:
         GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "-X odoo-one-click/config.VERSION=${{ env.BUMP_TAG }}" -o odoo-one-click .
         zip odoo-one-click_${{ matrix.goos }}_${{ matrix.goarch }}.zip odoo-one-click
         rm -f odoo-one-click
+    
+    - name: Set output
+      id: set_output
+      if: env.BUMP_TAG != 'NULL'
+      run: |
+        echo "bump_tag=${{ env.BUMP_TAG }}" >> $GITHUB_OUTPUT
+        echo "old_pre_tag=${{ env.OLD_PRE_TAG }}" >> $GITHUB_OUTPUT
 
   deploy:
     runs-on: ubuntu-latest
-    needs: [build]
+    needs: build
     steps:
     - name: Delete old prerelease tag with v0.x.x
-      if: (env.OLD_PRE_TAG == env.BUMP_TAG) && (env.BUMP_TAG != 'NULL')
+      if: (needs.build.outputs.old_pre_tag == needs.build.outputs.bump_tag) && (needs.build.outputs.bump_tag != 'NULL')
       uses: dev-drprasad/delete-tag-and-release@v0.2.1
       with:
         delete_release: true
-        tag_name: ${{ env.OLD_PRE_TAG }}
+        tag_name: ${{ needs.build.outputs.old_pre_tag }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Publish GitHub Release
-      if: env.BUMP_TAG != 'NULL'
+      if: needs.build.outputs.bump_tag != 'NULL'
       uses: ncipollo/release-action@v1.12.0
       with:
         prerelease: env.PRERELEASE
         artifacts: "*.zip"
-        tag: "${{ env.BUMP_TAG }}"
+        tag: "${{ needs.build.outputs.bump_tag }}"
         token: ${{ secrets.GITHUB_TOKEN }}
