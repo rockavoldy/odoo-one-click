@@ -100,6 +100,7 @@ jobs:
         GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags "-X odoo-one-click/config.VERSION=${{ env.BUMP_TAG }}" -o odoo-one-click .
         zip odoo-one-click_${{ matrix.goos }}_${{ matrix.goarch }}.zip odoo-one-click
         rm -f odoo-one-click
+        mv *.zip ./publish/
     
     - name: Set output
       id: set_output
@@ -107,6 +108,14 @@ jobs:
       run: |
         echo "bump_tag=${{ env.BUMP_TAG }}" >> $GITHUB_OUTPUT
         echo "old_pre_tag=${{ env.OLD_PRE_TAG }}" >> $GITHUB_OUTPUT
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@master
+      if: env.BUMP_TAG != 'NULL'
+      with:
+        name: publish-binaries
+        path: ${{ github.workspace }}/publish
+      
 
   deploy:
     runs-on: ubuntu-latest
@@ -121,11 +130,18 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Restore artifacts
+      uses: actions/download-artifact@master
+      if: needs.build.outputs.bump_tag != 'NULL'
+      with:
+        name: publish-binaries
+        path: ${{ github.workspace }}/publish
+
     - name: Publish GitHub Release
       if: needs.build.outputs.bump_tag != 'NULL'
       uses: ncipollo/release-action@v1.12.0
       with:
         prerelease: env.PRERELEASE
-        artifacts: "*.zip"
+        artifacts: "${{ github.workspace }}/publish/*.zip"
         tag: "${{ needs.build.outputs.bump_tag }}"
         token: ${{ secrets.GITHUB_TOKEN }}
