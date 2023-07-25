@@ -24,8 +24,10 @@ release_info=$(curl -s "https://api.github.com/repos/rockavoldy/odoo-one-click/r
 
 # and find it by the tag_name
 tag_name=$(echo "$release_info" | jq -r '.tag_name')
-asset_url=$(echo "$release_info" | jq -r --arg tag_name "$tag_name" '.assets[] | select(.name | contains($tag_name)) | .browser_download_url')
-asset_name=$(echo "$release_info" | jq -r --arg tag_name "$tag_name" '.assets[] | select(.name | contains($tag_name)) | .name')
+
+# only work for linux_amd64 for now, so still hardcode this one
+asset_url=$(echo "$release_info" | jq -r '.assets[] | select(.name | contains("linux_amd64")) | .browser_download_url')
+asset_name=$(echo "$release_info" | jq -r '.assets[] | select(.name | contains("linux_amd64")) | .name')
 
 if ! [ -n "$asset_name" ] 1>/dev/null 2>&1; then
   echo "odoo-one-click: no release detected, please create issues" >&2
