@@ -15,6 +15,7 @@ jobs:
     outputs:
       bump_tag: ${{ steps.set_output.outputs.bump_tag }}
       old_pre_tag: ${{ steps.set_output.outputs.old_pre_tag }}
+    if: contains(fromJSON('["patch:","feat:","feat(bump):",":release:"]'), github.event.head_commit.message)
     steps:
     - uses: actions/checkout@v3
     - name: Manage Version
@@ -32,48 +33,48 @@ jobs:
 
     - name: Increment patch version
       id: bump_patch
-      if: contains(github.event.head_commit.message, 'patch:') == true
+      if: contains(github.event.head_commit.message, 'patch:')
       uses: christian-draeger/increment-semantic-version@1.0.2
       with: 
         current-version: ${{ env.CUR_TAG }}
         version-fragment: 'bug'
 
     - name: Set env patch
-      if: contains(github.event.head_commit.message, 'patch:') == true
+      if: contains(github.event.head_commit.message, 'patch:')
       run: |
         echo "BUMP_TAG=${{ steps.bump_patch.outputs.next-version }}" >> $GITHUB_ENV
         echo "PRERELEASE=${{ true }}" >> $GITHUB_ENV
 
     - name: Increment minor version
       id: bump_minor
-      if: contains(github.event.head_commit.message, 'feat:') == true
+      if: contains(github.event.head_commit.message, 'feat:')
       uses: christian-draeger/increment-semantic-version@1.0.2
       with: 
         current-version: ${{ env.CUR_TAG }}
         version-fragment: 'feature'
 
     - name: Set env minor
-      if: contains(github.event.head_commit.message, 'feat:') == true
+      if: contains(github.event.head_commit.message, 'feat:')
       run: |
         echo "BUMP_TAG=${{ steps.bump_minor.outputs.next-version }}" >> $GITHUB_ENV
         echo "PRERELEASE=${{ true }}" >> $GITHUB_ENV
 
     - name: Increment major version
       id: bump_major
-      if: contains(github.event.head_commit.message, 'feat(bump):') == true
+      if: contains(github.event.head_commit.message, 'feat(bump):')
       uses: christian-draeger/increment-semantic-version@1.0.2
       with: 
         current-version: ${{ env.CUR_TAG }}
         version-fragment: 'major'
     
     - name: Set env major
-      if: contains(github.event.head_commit.message, 'feat(bump):') == true
+      if: contains(github.event.head_commit.message, 'feat(bump):')
       run: |
         echo "BUMP_TAG=${{ steps.bump_major.outputs.next-version }}" >> $GITHUB_ENV
         echo "PRERELEASE=${{ true }}" >> $GITHUB_ENV
 
     - name: Set RELEASE tag
-      if: contains(github.event.head_commit.message, ':release:') == true
+      if: contains(github.event.head_commit.message, ':release:')
       run: |
         echo "PRERELEASE=${{ false }}" >> $GITHUB_ENV
 
