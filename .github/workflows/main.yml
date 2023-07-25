@@ -15,7 +15,7 @@ jobs:
     outputs:
       bump_tag: ${{ steps.set_output.outputs.bump_tag }}
       old_pre_tag: ${{ steps.set_output.outputs.old_pre_tag }}
-    if: contains(fromJSON('["patch:","feat:","feat(bump):",":release:"]'), github.event.head_commit.message)
+    if: startsWith(github.event.head_commit.message, fromJSON('["patch:","feat:","feat(bump):"]'))
     steps:
     - uses: actions/checkout@v3
     - name: Manage Version
