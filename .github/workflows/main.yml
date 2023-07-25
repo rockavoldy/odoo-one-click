@@ -3,10 +3,6 @@ name: Build and release
 on:
   push:
     branches: [ "main" ]
-  # TODO: need to create unit test, and run the test when do PR to branches main
-  # pull_request:
-  #   branches: [ "main" ]
-
 
 jobs:
   build:
@@ -121,9 +117,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
+    if: ${{ needs.build.outputs.bump_tag }} && ${{ needs.build.outputs.old_pre_tag }}
     steps:
     - name: Delete old prerelease tag with v0.x.x
-      if: (needs.build.outputs.old_pre_tag == needs.build.outputs.bump_tag) && (needs.build.outputs.bump_tag != 'NULL')
+      if: ${{ needs.build.outputs.old_pre_tag == needs.build.outputs.bump_tag }} && (needs.build.outputs.bump_tag != 'NULL')
       uses: dev-drprasad/delete-tag-and-release@v0.2.1
       with:
         delete_release: true
