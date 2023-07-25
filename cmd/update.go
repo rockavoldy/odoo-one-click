@@ -1,8 +1,12 @@
 package cmd
 
 import (
+	"archive/zip"
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"odoo-one-click/config"
@@ -85,6 +89,28 @@ func CheckNewVersion() (bool, []Asset) {
 	return false, nil
 }
 
+func UncompressZip(src io.Reader, name string) (io.Reader, error) {
+	buf, err := ioutil.ReadAll(src)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create buffer for zip file: %s", err)
+	}
+
+	r := bytes.NewReader(buf)
+	z, err := zip.NewReader(r, r.Size())
+	if err != nil {
+		return nil, fmt.Errorf("failed to uncompress zip file: %s", err)
+	}
+
+	for _, file := range z.File {
+		if !file.FileInfo().IsDir() {
+			log.Println("Executable file", file.Name, "was found in zip archive")
+			return file.Open()
+		}
+	}
+
+	return nil, fmt.Errorf("file '%s' for the command is not found", name)
+}
+
 func DoUpdate(url string) {
 	resp, err := http.Get(url)
 	if err != nil {
@@ -92,7 +118,12 @@ func DoUpdate(url string) {
 	}
 	defer resp.Body.Close()
 
-	err = selfupdate.Apply(resp.Body, selfupdate.Options{})
+	unzipped, err := UncompressZip(resp.Body, url)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	err = selfupdate.Apply(unzipped, selfupdate.Options{})
 	if err != nil {
 		log.Fatalln(err)
 	}
