@@ -27,16 +27,19 @@ var initCmd = &cobra.Command{
 
 func CheckRequirement() {
 	// Check requirement for ubuntu and derivatives
-	fmt.Println("Checking requirement")
+	fmt.Println("Checking requirement for macOS")
 
-	listOfDeps := []string{"build-essential", "postgresql", "postgresql-client", "libxml2-dev", "libssl-dev", "libffi-dev", "libxslt1-dev", "libldap2-dev", "libsasl2-dev", "libtiff5-dev", "libjpeg8-dev", "libopenjp2-7-dev", "zlib1g-dev", "libfreetype6-dev", "liblcms2-dev", "libwebp-dev", "libharfbuzz-dev", "libpq-dev", "curl", "wget", "git", "libsqlite3-dev", "libreadline-dev", "libbz2-dev", "tk-dev"}
+	err := exec.Command("which", "brew").Run()
+	if err != nil {
+		Logger.Println("Check brew command: ", err)
+	}
+
+	listOfDeps := []string{"jpeg", "postgresql", "zlib"}
 
 	notInstalledDeps := make([]string, 0)
 
-	dpkgStatus := utils.PrependCommand(listOfDeps, []string{"--status"})
-
 	for _, dep := range listOfDeps {
-		err := exec.Command("dpkg", dpkgStatus...).Run()
+		err := exec.Command("brew", "list", dep).Run()
 		// when the package already installed, err will be nil
 		if err != nil {
 			Logger.Println("Check dependencies: ", err)
@@ -47,21 +50,15 @@ func CheckRequirement() {
 	if len(notInstalledDeps) > 0 {
 		fmt.Println("Seems like you don't have all the dependencies installed, installing dependencies")
 
-		// When there is still missing dependencies, install them
-		err := utils.CheckSudoAccess()
-		if err != nil {
-			Logger.Fatalln("Wrong password: ", err)
-		}
-
+		// brew didn't need to use sudo like on linux, so can just directly run the brew command
 		fmt.Println("Update apt repositories, please wait...")
-		err = exec.Command("sudo", "apt-get", "update").Run()
+		err = exec.Command("brew", "update").Run()
 		if err != nil {
-			Logger.Fatalln("Failed to update repositories: ", err)
+			Logger.Fatalln("Failed to update brew: ", err)
 		}
 
 		fmt.Println("Installing dependencies, please wait...")
-		cmdAptInstall := []string{"apt-get", "install", "-y"}
-		cmdAptInstall = utils.PrependCommand(notInstalledDeps, cmdAptInstall)
+		cmdAptInstall := utils.PrependCommand(notInstalledDeps, []string{"brew", "install"})
 
 		err = exec.Command("sudo", cmdAptInstall...).Run()
 		if err != nil {
@@ -69,31 +66,28 @@ func CheckRequirement() {
 		}
 
 		fmt.Println("Dependencies installed")
-		err = exec.Command("sudo", "service", "postgresql", "start").Run()
+		err = exec.Command("brew", "services", "start", "postgresql").Run()
 		if err != nil {
 			Logger.Fatalln("Failed to start postgresql: ", err)
 		}
 
 	}
 
-	dbAccess, err := checkDBAccess()
+	_, err = checkDBAccess()
 	if err != nil {
 		if strings.Contains(err.Error(), "exit status 127") {
 			Logger.Fatalln("Postgresql is not installed, please install it first")
 		}
 
-		Logger.Println("Can't access DB: ", err)
-	}
-
-	if !dbAccess {
-		err := configureDB()
-		if err != nil {
-			Logger.Fatalln("Error when configure DB: ", err)
-		}
-		fmt.Println("Database successfully configured")
+		Logger.Fatalln("Can't access DB: ", err)
 	}
 
 	fmt.Printf("Database user '%s' with password '%s' created with superuser access\n", config.DBUsername(), config.DB_PASSWORD)
+
+	err = addBuildPrerequisite()
+	if err != nil {
+		Logger.Fatalln("Failed to setup some requirements: ", err)
+	}
 
 	utils.PyenvInfoBash()
 }
@@ -102,7 +96,7 @@ func checkDBAccess() (bool, error) {
 	os.Setenv("PGPASSWORD", config.DB_PASSWORD)
 	psqlCmd := fmt.Sprintf("psql -h %s -p %s -U %s -c 'SELECT 1'", config.DB_HOST, config.DB_PORT, config.DBUsername())
 
-	err := exec.Command("bash", "-c", psqlCmd).Run()
+	err := exec.Command("zsh", "-c", psqlCmd).Run()
 	if err != nil {
 		return false, err
 	}
@@ -110,24 +104,6 @@ func checkDBAccess() (bool, error) {
 	Logger.Println("Database can be accessed")
 
 	return true, nil
-}
-
-func configureDB() error {
-	// TODO: Add validation first, to make sure no create command again executed
-	os.Setenv("PGPASSWORD", config.DB_PASSWORD)
-	psqlScript := fmt.Sprintf(`psql -c "CREATE ROLE %s SUPERUSER LOGIN PASSWORD '%s';"`, config.DBUsername(), config.DB_PASSWORD)
-	err := exec.Command("sudo", "su", "-", "postgres", "-c", psqlScript).Run()
-	if err != nil {
-		Logger.Println("Create role: ", err.Error())
-	}
-
-	// if db for the user already exist, there is no need to new one, so this will return error
-	err = exec.Command("createdb", "-h", config.DB_HOST, "-U", config.DBUsername(), config.DBUsername()).Run()
-	if err != nil {
-		Logger.Println("Create database: ", err.Error())
-	}
-
-	return nil
 }
 
 func isPyenvInstalled() (bool, error) {
@@ -141,7 +117,7 @@ func isPyenvInstalled() (bool, error) {
 
 func installPyenv() (bool, error) {
 	pyenvScript := exec.Command("curl", "https://pyenv.run")
-	runBash := exec.Command("bash")
+	runBash := exec.Command("zsh")
 	runBash.Stdin, _ = pyenvScript.StdoutPipe()
 	runBash.Stdout = os.Stdout
 	_ = runBash.Start()
@@ -151,7 +127,7 @@ func installPyenv() (bool, error) {
 		return false, err
 	}
 
-	err = exec.Command("bash", "-c", "exec $SHELL").Run()
+	err = exec.Command("zsh", "-c", "exec $SHELL").Run()
 	if err != nil {
 		return false, err
 	}
@@ -179,4 +155,38 @@ func checkPyenv() {
 			Logger.Fatalln(err)
 		}
 	}
+}
+
+func addBuildPrerequisite() error {
+	// some build flags and some brew packages need to be linked forcefully
+
+	// link jpeg and zlib first
+	err := exec.Command("brew", "link", "jpeg", "--force").Run()
+	if err != nil {
+		return err
+	}
+
+	err = exec.Command("brew", "link", "zlib", "--force").Run()
+	if err != nil {
+		return err
+	}
+
+	// add build flags to cppflags
+	// LDFLAGS=-L$(brew --prefix openssl@1.1)/lib
+	err = exec.Command("export", "LDFLAGS=-L$(brew --prefix openssl@1.1)/lib").Run()
+	if err != nil {
+		return err
+	}
+	// CPPFLAGS=-I$(brew --prefix openssl@1.1)/include
+	err = exec.Command("export", "CPPFLAGS=-I$(brew --prefix openssl@1.1)/include").Run()
+	if err != nil {
+		return err
+	}
+	// CFLAGS="-Wno-error=implicit-function-declaration"
+	err = exec.Command("export", "CFLAGS=\"-Wno-error=implicit-function-declaration\"").Run()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

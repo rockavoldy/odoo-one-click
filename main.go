@@ -12,12 +12,14 @@ import (
 
 func main() {
 	// OS Check, for now it's only for ubuntu and derivatives
-	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
+	if runtime.GOOS == "linux" {
 		// Check if UBUNTU_CODENAME is on allowedOS
 		if err := checkOSVersion(); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
+	} else if runtime.GOOS == "darwin" {
+
 	} else {
 		fmt.Println("This application only works on Ubuntu or derivatives")
 		os.Exit(1)

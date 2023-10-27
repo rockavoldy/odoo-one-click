@@ -136,6 +136,13 @@ jobs:
         name: publish-binaries
         path: ${{ github.workspace }}/publish
 
+    - name: Get Commits since last Release
+      id: changes
+      uses: simbo/changes-since-last-release-action@v1
+      with:
+        line-prefix: "* "
+        include-hashes: false
+
     - name: Publish GitHub Release
       if: needs.build.outputs.bump_tag != 'NULL'
       uses: ncipollo/release-action@v1.12.0
@@ -144,3 +151,6 @@ jobs:
         artifacts: "${{ github.workspace }}/publish/*.zip"
         tag: "${{ needs.build.outputs.bump_tag }}"
         token: ${{ secrets.GITHUB_TOKEN }}
+        body: |
+          Changes since ${{ steps.changes.outputs.last-tag }}:
+          ${{ steps.changes.outputs.log }}
