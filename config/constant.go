@@ -2,6 +2,8 @@ package config
 
 import (
 	"os"
+	"os/user"
+	"runtime"
 )
 
 var (
@@ -22,7 +24,13 @@ func OdooVersion() string {
 }
 
 func DBUsername() string {
-	return "odoo"
+	switch runtime.GOOS {
+	case "darwin":
+		u, _ := user.Current()
+		return u.Username
+	default:
+		return "odoo"
+	}
 }
 
 func OdooDir() string {
