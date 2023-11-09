@@ -137,7 +137,7 @@ jobs:
         path: ${{ github.workspace }}/publish
 
     - name: Get Commits since last Release
-      id: changes
+      id: changelog
       uses: simbo/changes-since-last-release-action@v1
       with:
         line-prefix: "* "
@@ -152,5 +152,5 @@ jobs:
         tag: "${{ needs.build.outputs.bump_tag }}"
         token: ${{ secrets.GITHUB_TOKEN }}
         body: |
-          Changes since ${{ steps.changes.outputs.last-tag }}:
-          ${{ steps.changes.outputs.log }}
+          Changes since ${{ steps.changelog.outputs.last-tag }}:
+          ${{ steps.changelog.outputs.log }}

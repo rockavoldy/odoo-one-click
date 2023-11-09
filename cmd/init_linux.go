@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -54,18 +55,34 @@ func CheckRequirement() {
 		}
 
 		fmt.Println("Update apt repositories, please wait...")
-		err = exec.Command("sudo", "apt-get", "update").Run()
-		if err != nil {
-			Logger.Fatalln("Failed to update repositories: ", err)
+		doneProcess := false
+		for !doneProcess {
+			err = exec.Command("sudo", "apt-get", "update").Run()
+			if err != nil {
+				if !strings.Contains(err.Error(), "exit status 100") {
+					doneProcess = true
+					Logger.Fatalln("Failed to update repositories: ", err)
+				}
+				Logger.Println("Update repositories: ", err)
+				time.Sleep(500 * time.Millisecond)
+			}
 		}
 
 		fmt.Println("Installing dependencies, please wait...")
-		cmdAptInstall := []string{"apt-get", "install", "-y"}
+		cmdAptInstall := []string{"apt-get", "install", "-y", "--no-install-recommends"}
 		cmdAptInstall = utils.PrependCommand(notInstalledDeps, cmdAptInstall)
 
-		err = exec.Command("sudo", cmdAptInstall...).Run()
-		if err != nil {
-			Logger.Fatalln("Install dependencies: ", err)
+		doneProcess = false
+		for !doneProcess {
+			err = exec.Command("sudo", cmdAptInstall...).Run()
+			if err != nil {
+				if !strings.Contains(err.Error(), "exit status 100") {
+					doneProcess = true
+					Logger.Fatalln("Failed to install dependencies: ", err)
+				}
+				Logger.Println("Install dependencies: ", err)
+				time.Sleep(500 * time.Millisecond)
+			}
 		}
 
 		fmt.Println("Dependencies installed")

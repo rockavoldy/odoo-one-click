@@ -128,18 +128,21 @@ addons_path = ./addons, ./odoo/addons`, dbUser, dbPass, dbName)
 }
 
 func PyenvInfoBash() {
+	rcfile := "~/.bashrc"
+	if strings.Contains(os.Getenv("SHELL"), "zsh") {
+		rcfile = "~/.zshrc"
+	}
 	fmt.Println()
-	fmt.Println("One more thing you need to do, please add this line to your ~/.bashrc file:")
+	fmt.Printf("One more thing you need to do, please add this line to your %s file:\n", rcfile)
 	fmt.Println("(Just copy and paste to your terminal line per line)")
 	fmt.Println()
-	fmt.Println(`echo 'PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc`)
-	fmt.Println(`echo 'PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc`)
-	fmt.Println(`echo 'eval "$(pyenv init -)"' >> ~/.bashrc`)
-	fmt.Println(`echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc`)
+	fmt.Printf(`echo 'PYENV_ROOT="$HOME/.pyenv"' >> %s\n`, rcfile)
+	fmt.Printf(`echo 'PATH="$PYENV_ROOT/bin:$PATH"' >> %s\n`, rcfile)
+	fmt.Printf(`echo 'eval "$(pyenv init -)"' >> %s\n`, rcfile)
+	fmt.Printf(`echo 'eval "$(pyenv virtualenv-init -)"' >> %s\n`, rcfile)
 	fmt.Println()
-	fmt.Println("Then run this command to reload your bashrc file")
-	fmt.Println("source ~/.bashrc")
-	fmt.Printf("\n\nIf you have zsh as your shell, changes '~/.bashrc' here with '~/.zshrc'\n\n")
+	fmt.Println("Then run this command to reload your shell")
+	fmt.Printf("source %s\n", rcfile)
 }
 
 func IsPyenvConfigured() bool {
@@ -169,6 +172,8 @@ func ValidateOdooVer(odooVer string) bool {
 	case "15.0":
 		return true
 	case "16.0":
+		return true
+	case "17.0":
 		return true
 	default:
 		return false
