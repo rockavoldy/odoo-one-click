@@ -135,6 +135,9 @@ jobs:
       with:
         name: publish-binaries
         path: ${{ github.workspace }}/publish
+    
+    - name: Manage Version
+      uses: actions/checkout@v3
 
     - name: Conventional Changelog Action
       id: changelog
