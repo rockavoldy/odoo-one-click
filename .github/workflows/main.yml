@@ -155,5 +155,5 @@ jobs:
         tag: "${{ needs.build.outputs.bump_tag }}"
         token: ${{ secrets.GITHUB_TOKEN }}
         body: |
-          Changes since ${{ steps.changelog.outputs.last-tag }}:
+          Changes since ${{ needs.build.outputs.old_pre_tag }}:
           ${{ steps.changelog.outputs.log }}
