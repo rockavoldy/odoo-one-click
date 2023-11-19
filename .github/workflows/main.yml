@@ -151,7 +151,7 @@ jobs:
       uses: ncipollo/release-action@v1.12.0
       with:
         prerelease: env.PRERELEASE
-        artifacts: "${{ github.workspace }}/publish/*.zip"
+        artifacts: "${{ github.workspace }}/publish/*"
         tag: "${{ needs.build.outputs.bump_tag }}"
         token: ${{ secrets.GITHUB_TOKEN }}
         body: |
