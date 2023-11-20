@@ -55,17 +55,13 @@ func CheckRequirement() {
 		}
 
 		fmt.Println("Update apt repositories, please wait...")
-		doneProcess := false
-		for !doneProcess {
-			err = exec.Command("sudo", "apt-get", "update").Run()
-			if err != nil {
-				if !strings.Contains(err.Error(), "exit status 100") {
-					doneProcess = true
-					Logger.Fatalln("Failed to update repositories: ", err)
-				}
-				Logger.Println("Update repositories: ", err)
-				time.Sleep(500 * time.Millisecond)
+		err = exec.Command("sudo", "apt-get", "update").Run()
+		if err != nil {
+			if !strings.Contains(err.Error(), "exit status 100") {
+				Logger.Fatalln("Failed to update repositories: ", err)
 			}
+			Logger.Println("Update repositories: ", err)
+			time.Sleep(500 * time.Millisecond)
 		}
 
 		fmt.Println("Installing dependencies, please wait...")
