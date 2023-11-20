@@ -68,17 +68,13 @@ func CheckRequirement() {
 		cmdAptInstall := []string{"apt-get", "install", "-y", "--no-install-recommends"}
 		cmdAptInstall = utils.PrependCommand(notInstalledDeps, cmdAptInstall)
 
-		doneProcess = false
-		for !doneProcess {
-			err = exec.Command("sudo", cmdAptInstall...).Run()
-			if err != nil {
-				if !strings.Contains(err.Error(), "exit status 100") {
-					doneProcess = true
-					Logger.Fatalln("Failed to install dependencies: ", err)
-				}
-				Logger.Println("Install dependencies: ", err)
-				time.Sleep(500 * time.Millisecond)
+		err = exec.Command("sudo", cmdAptInstall...).Run()
+		if err != nil {
+			if !strings.Contains(err.Error(), "exit status 100") {
+				Logger.Fatalln("Failed to install dependencies: ", err)
 			}
+			Logger.Println("Install dependencies: ", err)
+			time.Sleep(500 * time.Millisecond)
 		}
 
 		fmt.Println("Dependencies installed")
